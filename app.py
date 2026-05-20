@@ -358,7 +358,12 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', '5000'))
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
     app.run(host=host, port=port, debug=debug)
+=======
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
+    app.run(debug=debug_mode)
+>>>>>>> 991e095729c7ed0b8581c3f53f8ed056ff7f7ec6
