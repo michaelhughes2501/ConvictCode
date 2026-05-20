@@ -71,7 +71,7 @@ with app.app_context():
 | `DATABASE_URL` | `sqlite:///felon_dating.db` | Database connection string |
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `5000` | Bind port |
-| `FLASK_DEBUG` | `0` | Enable debug mode (`1` = on) |
+| `FLASK_DEBUG` | `0` | Enable debug mode (e.g., `1`, `true`, `yes`, `on`) |
 
 Never commit `.env` to version control — it is listed in `.gitignore`.
 
@@ -79,7 +79,7 @@ Never commit `.env` to version control — it is listed in `.gitignore`.
 
 ## CSRF Protection
 
-**Flask-WTF** provides CSRF token validation for all HTML form submissions. The `SECRET_KEY` environment variable is used to sign tokens.
+**Flask-WTF** provides CSRF token validation for submissions using `FlaskForm`. The `SECRET_KEY` environment variable is used to sign tokens. Note that routes not using `FlaskForm` (such as `add_comment`) currently lack CSRF protection — global `CSRFProtect` is not initialised in `app.py`.
 
 ---
 
