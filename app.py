@@ -24,7 +24,10 @@ login_manager.login_message = 'Please log in to access this page.'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
 
 # Forms
 class RegistrationForm(FlaskForm):
@@ -355,4 +358,7 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', '5000'))
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    app.run(host=host, port=port, debug=debug)
