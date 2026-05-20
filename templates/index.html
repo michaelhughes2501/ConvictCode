@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Home - SecondChance Connect{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5">
+    <div class="container">
+        <h1 class="display-4 mb-4">Welcome to SecondChance Connect</h1>
+        <p class="lead mb-4">A supportive community for individuals seeking meaningful connections and second chances in life.</p>
+        {% if not current_user.is_authenticated %}
+            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 gap-3">Join Now</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg px-4">Login</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-heart fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Find Meaningful Connections</h5>
+                <p class="card-text">Connect with others who understand your journey and share similar experiences.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-comments fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Supportive Community</h5>
+                <p class="card-text">Join our forum discussions, share your story, and get support from peers.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Track Your Progress</h5>
+                <p class="card-text">Share your rehabilitation journey and celebrate milestones with the community.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info text-center">
+            <strong>Our Mission:</strong> We believe everyone deserves a second chance. Our platform provides a safe, respectful space for individuals with past convictions to build meaningful relationships and support networks.
+        </div>
+    </div>
+</div>
+{% endblock %}
