@@ -1,4 +1,22 @@
 
-
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment
+.env
+venv/
+.venv/
+
+# Database
+*.db
+instance/
+
+# OS
+.DS_Store
+Thumbs.db
