@@ -1,56 +1,190 @@
 {% extends "base.html" %}
 
-{% block title %}Home - SecondChance Connect{% endblock %}
+{% block title %}Home — SecondChance Connect{% endblock %}
 
-{% block content %}
-<div class="hero-section text-center py-5">
-    <div class="container">
-        <h1 class="display-4 mb-4">Welcome to SecondChance Connect</h1>
-        <p class="lead mb-4">A supportive community for individuals seeking meaningful connections and second chances in life.</p>
+{% block full_content %}
+
+<!-- Hero -->
+<section class="hero-section" aria-labelledby="hero-heading">
+  <div class="hero-shape hero-shape-1" aria-hidden="true"></div>
+  <div class="hero-shape hero-shape-2" aria-hidden="true"></div>
+  <div class="container text-center position-relative">
+    <div class="hero-badge mb-3">
+      <i class="fas fa-dove me-1" aria-hidden="true"></i> Building second chances together
+    </div>
+    <h1 id="hero-heading" class="display-4 fw-bold mb-3">
+      You Deserve a<br class="d-none d-md-block"> Second Chance
+    </h1>
+    <p class="lead mb-4 mx-auto" style="max-width:600px">
+      A safe, respectful community for individuals with past convictions to build meaningful
+      connections, find resources, and support one another on the path forward.
+    </p>
+    {% if not current_user.is_authenticated %}
+      <div class="d-flex flex-wrap gap-3 justify-content-center">
+        <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg fw-semibold px-4">
+          <i class="fas fa-user-plus me-2" aria-hidden="true"></i>Join Free Today
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4">
+          Sign In
+        </a>
+      </div>
+    {% else %}
+      <a href="{{ url_for('dashboard') }}" class="btn btn-warning btn-lg fw-semibold px-4">
+        <i class="fas fa-gauge-high me-2" aria-hidden="true"></i>Go to Dashboard
+      </a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Stats bar -->
+<section class="bg-dark text-white py-3" aria-label="Platform statistics">
+  <div class="container">
+    <div class="row row-cols-2 row-cols-md-4 g-0 text-center">
+      <div class="col py-2">
+        <div class="fw-bold fs-4 text-warning">1,000+</div>
+        <div class="small opacity-75">Members</div>
+      </div>
+      <div class="col py-2">
+        <div class="fw-bold fs-4 text-warning">500+</div>
+        <div class="small opacity-75">Resources</div>
+      </div>
+      <div class="col py-2">
+        <div class="fw-bold fs-4 text-warning">10K+</div>
+        <div class="small opacity-75">Connections Made</div>
+      </div>
+      <div class="col py-2">
+        <div class="fw-bold fs-4 text-warning">50+</div>
+        <div class="small opacity-75">Cities</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="container py-5" aria-labelledby="features-heading">
+  <h2 id="features-heading" class="text-center fw-bold mb-2">Everything you need to move forward</h2>
+  <p class="text-center text-muted mb-5">Tools, connections, and resources — all in one place.</p>
+
+  <div class="row g-4">
+    <div class="col-md-4 animate-on-scroll delay-1">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(37,99,235,.12);color:var(--scc-primary);" aria-hidden="true">
+            <i class="fas fa-heart fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">Meaningful Connections</h3>
+          <p class="text-muted small mb-0">
+            Match and connect with people who understand your journey.
+            Mutual-like matching ensures every connection is mutual.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 animate-on-scroll delay-2">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(124,58,237,.12);color:var(--scc-purple);" aria-hidden="true">
+            <i class="fas fa-comments fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">Supportive Forum</h3>
+          <p class="text-muted small mb-0">
+            Share your story, ask for advice, and celebrate wins in a
+            moderated community forum.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 animate-on-scroll delay-3">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(16,185,129,.12);color:var(--scc-success);" aria-hidden="true">
+            <i class="fas fa-hands-helping fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">Resource Directory</h3>
+          <p class="text-muted small mb-0">
+            Find housing, employment, legal aid, and mental health
+            resources in our searchable directory.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 animate-on-scroll delay-1">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(245,158,11,.12);color:var(--scc-secondary);" aria-hidden="true">
+            <i class="fas fa-robot fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">AI Support Assistant</h3>
+          <p class="text-muted small mb-0">
+            Get instant, empathetic help finding resources and navigating
+            your reentry journey from our AI assistant.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 animate-on-scroll delay-2">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(239,68,68,.12);color:var(--scc-danger);" aria-hidden="true">
+            <i class="fas fa-envelope fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">Private Messaging</h3>
+          <p class="text-muted small mb-0">
+            Communicate privately with your matches in a safe,
+            secure messaging environment.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 animate-on-scroll delay-3">
+      <div class="card h-100 text-center p-2">
+        <div class="card-body">
+          <div class="stat-icon mb-3" style="background:rgba(37,99,235,.12);color:var(--scc-primary);" aria-hidden="true">
+            <i class="fas fa-chart-line fa-lg"></i>
+          </div>
+          <h3 class="h5 fw-semibold">Track Your Progress</h3>
+          <p class="text-muted small mb-0">
+            Monitor your rehabilitation journey, share milestones, and
+            inspire others with your progress.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mission banner -->
+<section class="py-5 bg-dark text-white" aria-labelledby="mission-heading">
+  <div class="container">
+    <div class="row align-items-center g-4">
+      <div class="col-md-7">
+        <h2 id="mission-heading" class="fw-bold mb-3">Our Mission</h2>
+        <p class="opacity-90 mb-3">
+          We believe everyone deserves a second chance. SecondChance Connect is a safe,
+          respectful space where individuals with past convictions can build meaningful relationships,
+          access vital resources, and find community support.
+        </p>
+        <p class="opacity-75 small mb-4">
+          Rehabilitation is a journey, not a destination. We're here to walk it with you.
+        </p>
         {% if not current_user.is_authenticated %}
-            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 gap-3">Join Now</a>
-                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg px-4">Login</a>
-            </div>
+          <a href="{{ url_for('register') }}" class="btn btn-warning fw-semibold">
+            Start Your Journey
+          </a>
         {% endif %}
+      </div>
+      <div class="col-md-5 text-center">
+        <div class="py-4" aria-hidden="true">
+          <i class="fas fa-dove" style="font-size:6rem;opacity:.15;"></i>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
+</section>
 
-<div class="row mt-5">
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 text-center">
-            <div class="card-body">
-                <i class="fas fa-heart fa-3x text-primary mb-3"></i>
-                <h5 class="card-title">Find Meaningful Connections</h5>
-                <p class="card-text">Connect with others who understand your journey and share similar experiences.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 text-center">
-            <div class="card-body">
-                <i class="fas fa-comments fa-3x text-primary mb-3"></i>
-                <h5 class="card-title">Supportive Community</h5>
-                <p class="card-text">Join our forum discussions, share your story, and get support from peers.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 text-center">
-            <div class="card-body">
-                <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                <h5 class="card-title">Track Your Progress</h5>
-                <p class="card-text">Share your rehabilitation journey and celebrate milestones with the community.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="alert alert-info text-center">
-            <strong>Our Mission:</strong> We believe everyone deserves a second chance. Our platform provides a safe, respectful space for individuals with past convictions to build meaningful relationships and support networks.
-        </div>
-    </div>
-</div>
 {% endblock %}

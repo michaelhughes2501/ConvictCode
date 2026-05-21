@@ -1,97 +1,231 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>{% block title %}Felon Dating & Support{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}SecondChance Connect{% endblock %}</title>
+
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- App styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+
+  <!-- Inline: apply saved theme before first paint (prevents flash) -->
+  <script>
+    (function(){const t=localStorage.getItem('scc-theme')||'light';
+    document.documentElement.setAttribute('data-bs-theme',t);})();
+  </script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-heart"></i> SecondChance Connect
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+
+  <!-- Skip to main content (accessibility) -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <!-- ── Navbar ──────────────────────────────────────────────── -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('index') }}" aria-label="SecondChance Connect home">
+        <i class="fas fa-dove" aria-hidden="true"></i> SecondChance
+      </a>
+
+      <button class="navbar-toggler" type="button"
+              data-bs-toggle="collapse" data-bs-target="#navbarMain"
+              aria-controls="navbarMain" aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarMain">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% if current_user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+                 href="{{ url_for('dashboard') }}" aria-current="{% if request.endpoint == 'dashboard' %}page{% endif %}">
+                <i class="fas fa-gauge-high" aria-hidden="true"></i>
+                <span class="ms-1">Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'matches' %}active{% endif %}"
+                 href="{{ url_for('matches') }}">
+                <i class="fas fa-users" aria-hidden="true"></i>
+                <span class="ms-1">Matches</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'messages' %}active{% endif %}"
+                 href="{{ url_for('messages') }}">
+                <i class="fas fa-envelope" aria-hidden="true"></i>
+                <span class="ms-1">Messages</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'forum' %}active{% endif %}"
+                 href="{{ url_for('forum') }}">
+                <i class="fas fa-comments" aria-hidden="true"></i>
+                <span class="ms-1">Forum</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'search' %}active{% endif %}"
+                 href="{{ url_for('search') }}">
+                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                <span class="ms-1">Search</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'resources_page' %}active{% endif %}"
+                 href="{{ url_for('resources_page') }}">
+                <i class="fas fa-hands-helping" aria-hidden="true"></i>
+                <span class="ms-1">Resources</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('resources_page') }}">
+                <i class="fas fa-hands-helping" aria-hidden="true"></i>
+                <span class="ms-1">Resources</span>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+
+        <ul class="navbar-nav ms-auto align-items-center gap-1">
+          <!-- Dark mode toggle -->
+          <li class="nav-item">
+            <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+              <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('matches') }}">
-                                <i class="fas fa-users"></i> Matches
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('messages') }}">
-                                <i class="fas fa-envelope"></i> Messages
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('forum') }}">
-                                <i class="fas fa-comments"></i> Forum
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('search') }}">
-                                <i class="fas fa-search"></i> Search
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('profile') }}">
-                                <i class="fas fa-user"></i> Profile
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('logout') }}">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('register') }}">Register</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
+          </li>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+          {% if current_user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}"
+                 href="{{ url_for('profile') }}">
+                <i class="fas fa-circle-user" aria-hidden="true"></i>
+                <span class="ms-1 d-none d-lg-inline">{{ current_user.username }}</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('logout') }}">
+                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                <span class="ms-1 d-none d-lg-inline">Logout</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'login' %}active{% endif %}"
+                 href="{{ url_for('login') }}">Login</a>
+            </li>
+            <li class="nav-item">
+              <a class="btn btn-primary btn-sm ms-1" href="{{ url_for('register') }}">Join Free</a>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
 
+  <!-- ── Flash messages ──────────────────────────────────────── -->
+  <div class="container mt-3" aria-live="polite" aria-atomic="true">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+               role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- ── Main content ────────────────────────────────────────── -->
+  <main id="main-content" tabindex="-1">
+    {% block full_content %}
+      <div class="container py-4">
         {% block content %}{% endblock %}
+      </div>
+    {% endblock %}
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────── -->
+  <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+          <p class="mb-1 fw-semibold">
+            <i class="fas fa-dove me-1" aria-hidden="true"></i> SecondChance Connect
+          </p>
+          <small class="opacity-75">A supportive community for second chances and new beginnings.</small>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="{{ url_for('resources_page') }}" class="me-3">Resources</a>
+          <a href="{{ url_for('forum') }}" class="me-3">Forum</a>
+          {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('register') }}">Join Free</a>
+          {% endif %}
+        </div>
+      </div>
+      <hr class="opacity-25 my-3">
+      <p class="mb-0 text-center opacity-50 small">&copy; {{ 2024 }} SecondChance Connect &mdash; Everyone deserves a second chance.</p>
+    </div>
+  </footer>
+
+  <!-- ── Scroll-to-top ───────────────────────────────────────── -->
+  <button id="scroll-top" aria-label="Scroll to top" title="Back to top">
+    <i class="fas fa-chevron-up" aria-hidden="true"></i>
+  </button>
+
+  {% if current_user.is_authenticated %}
+  <!-- ── AI Chatbot widget ────────────────────────────────────── -->
+  <button id="chatbot-fab" aria-label="Open support chat" aria-expanded="false">
+    <i class="fas fa-robot" aria-hidden="true"></i>
+  </button>
+
+  <div id="chatbot-panel" role="dialog" aria-label="AI Support Assistant" aria-modal="true">
+    <div class="chatbot-header">
+      <div class="profile-avatar" style="width:32px;height:32px;font-size:.85rem;" aria-hidden="true">AI</div>
+      <div>
+        <h6>Support Assistant</h6>
+        <small>Powered by Claude AI</small>
+      </div>
+      <button id="chatbot-close" class="chatbot-close" aria-label="Close chat">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
     </div>
 
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <div class="container">
-            <p>&copy; 2024 SecondChance Connect - A supportive community for second chances</p>
-            <small>We believe in rehabilitation, support, and new beginnings.</small>
-        </div>
-    </footer>
+    <!-- Quick prompts -->
+    <div class="chatbot-quick-btns" aria-label="Quick prompts">
+      <button class="chatbot-quick-btn" type="button">Find housing</button>
+      <button class="chatbot-quick-btn" type="button">Job resources</button>
+      <button class="chatbot-quick-btn" type="button">Legal aid</button>
+      <button class="chatbot-quick-btn" type="button">Mental health</button>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <div id="chatbot-messages" role="log" aria-live="polite" aria-label="Chat messages"></div>
+
+    <div class="chatbot-input-row">
+      <input id="chatbot-input" type="text" placeholder="Ask for help…"
+             aria-label="Type your message" maxlength="400" autocomplete="off">
+      <button id="chatbot-send" aria-label="Send message" type="button">
+        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Bootstrap 5.3 bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- App JS -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

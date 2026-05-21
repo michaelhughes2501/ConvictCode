@@ -1,81 +1,110 @@
 {% extends "base.html" %}
 
-{% block title %}{{ post.title }} - SecondChance Connect{% endblock %}
+{% block title %}{{ post.title }} — SecondChance Connect{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="mb-3">
-            <a href="{{ url_for('forum') }}" class="text-decoration-none">&larr; Back to Forum</a>
+  <div class="col-lg-9">
+
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <a href="{{ url_for('forum') }}" class="text-decoration-none small text-muted">
+        <i class="fas fa-chevron-left me-1" aria-hidden="true"></i> Back to Forum
+      </a>
+    </nav>
+
+    <!-- Post -->
+    <article class="card mb-4 animate-on-scroll" aria-labelledby="post-heading">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <span class="badge bg-primary-subtle text-primary mb-2">{{ post.category }}</span>
+            <h1 class="h3 fw-bold mb-1" id="post-heading">{{ post.title }}</h1>
+            <p class="text-muted small mb-0">
+              <i class="fas fa-user me-1" aria-hidden="true"></i>
+              {{ post.author.get_full_name() or post.author.username }}
+              &nbsp;&middot;&nbsp;
+              <i class="fas fa-clock me-1" aria-hidden="true"></i>
+              <time datetime="{{ post.created_at.isoformat() if post.created_at else '' }}">
+                {{ post.created_at.strftime('%B %d, %Y') if post.created_at else '' }}
+              </time>
+            </p>
+          </div>
+          <div class="text-muted small">
+            <i class="fas fa-eye me-1" aria-hidden="true"></i>{{ post.views }} views
+          </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                    <div>
-                        <span class="badge bg-primary mb-2">{{ post.category }}</span>
-                        <h1 class="h3 mb-2">{{ post.title }}</h1>
-                        <p class="text-muted mb-0">
-                            Posted by {{ post.author.get_full_name() or post.author.username }}
-                            · {{ post.created_at.strftime('%b %d, %Y') if post.created_at else '' }}
-                        </p>
-                    </div>
-                    <div class="text-muted small">
-                        <div><i class="fas fa-eye"></i> {{ post.views }} views</div>
-                    </div>
-                </div>
+        <hr>
 
-                <hr>
+        <div class="post-content" style="white-space:pre-wrap;line-height:1.7;">{{ post.content }}</div>
+      </div>
+    </article>
 
-                <div class="post-content">
-                    <p class="mb-0" style="white-space: pre-wrap;">{{ post.content }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h2 class="h5 mb-0">Comments</h2>
-            </div>
-            <div class="card-body">
-                {% if comments %}
-                    <div class="vstack gap-3">
-                        {% for comment in comments %}
-                            <div class="border rounded p-3 bg-white">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong>{{ comment.author.get_full_name() or comment.author.username }}</strong>
-                                    <small class="text-muted">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') if comment.created_at else '' }}</small>
-                                </div>
-                                <div style="white-space: pre-wrap;">{{ comment.content }}</div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted mb-0">No comments yet. Start the conversation.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        {% if current_user.is_authenticated %}
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h2 class="h5 mb-0">Add a Comment</h2>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{{ url_for('add_comment', post_id=post.id) }}">
-                        <div class="mb-3">
-                            <label for="content" class="form-label">Comment</label>
-                            <textarea id="content" name="content" class="form-control" rows="4" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Post Comment</button>
-                    </form>
-                </div>
-            </div>
-        {% else %}
-            <div class="alert alert-info mb-0">
-                <a href="{{ url_for('login') }}">Log in</a> to join the discussion.
-            </div>
+    <!-- Comments -->
+    <section aria-labelledby="comments-heading">
+      <h2 class="h5 fw-semibold mb-3" id="comments-heading">
+        <i class="fas fa-comments me-2 text-primary" aria-hidden="true"></i>
+        Comments
+        {% if comments %}
+          <span class="badge bg-secondary ms-1">{{ comments | length }}</span>
         {% endif %}
-    </div>
+      </h2>
+
+      {% if comments %}
+        <div class="vstack gap-3 mb-4">
+          {% for comment in comments %}
+            <div class="forum-comment animate-on-scroll delay-{{ loop.index0 % 3 + 1 }}">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="profile-avatar" style="width:30px;height:30px;font-size:.75rem;" aria-hidden="true">
+                    {{ (comment.author.get_full_name() or comment.author.username)[0].upper() }}
+                  </div>
+                  <strong class="small">{{ comment.author.get_full_name() or comment.author.username }}</strong>
+                </div>
+                <time class="text-muted small"
+                      datetime="{{ comment.created_at.isoformat() if comment.created_at else '' }}">
+                  {{ comment.created_at.strftime('%b %d, %Y') if comment.created_at else '' }}
+                </time>
+              </div>
+              <p class="mb-0 small" style="white-space:pre-wrap;">{{ comment.content }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted small mb-4">No comments yet. Be the first to share your thoughts!</p>
+      {% endif %}
+
+      <!-- Add comment form -->
+      {% if current_user.is_authenticated %}
+        <div class="card animate-on-scroll">
+          <div class="card-header fw-semibold">
+            <i class="fas fa-pen me-2 text-primary" aria-hidden="true"></i>Add a Comment
+          </div>
+          <div class="card-body">
+            <form method="post"
+                  action="{{ url_for('add_comment', post_id=post.id) }}"
+                  aria-label="Comment form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="mb-3">
+                <label for="content" class="form-label fw-semibold">Your comment</label>
+                <textarea id="content" name="content" class="form-control" rows="4"
+                          maxlength="2000"
+                          placeholder="Share your thoughts…" required
+                          aria-required="true"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-1" aria-hidden="true"></i> Post Comment
+              </button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          <a href="{{ url_for('login') }}" class="fw-semibold">Sign in</a> to join the discussion.
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
 </div>
 {% endblock %}
