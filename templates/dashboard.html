@@ -1,116 +1,260 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - SecondChance Connect{% endblock %}
+{% block title %}Dashboard — SecondChance Connect{% endblock %}
+
+{% block extra_head %}
+<style>
+  .chart-container { position: relative; height: 220px; }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Welcome Back, {{ current_user.get_full_name() or current_user.username }}!</h1>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-users"></i> Your Matches</h5>
-            </div>
-            <div class="card-body">
-                {% if matches %}
-                    {% for match in matches %}
-                        <div class="match-item mb-2">
-                            <a href="{{ url_for('view_profile', user_id=match.user2.id if match.user1_id == current_user.id else match.user1.id) }}">
-                                {{ match.user2.get_full_name() if match.user1_id == current_user.id else match.user1.get_full_name() }}
-                            </a>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No matches yet. Keep connecting with others!</p>
-                    <a href="{{ url_for('search') }}" class="btn btn-primary btn-sm">Find Matches</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-envelope"></i> Messages</h5>
-            </div>
-            <div class="card-body">
-                <h3 class="text-center">{{ unread_messages }}</h3>
-                <p class="text-center text-muted">Unread Messages</p>
-                <a href="{{ url_for('messages') }}" class="btn btn-info btn-sm w-100">View All Messages</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-star"></i> Recent Interest</h5>
-            </div>
-            <div class="card-body">
-                {% if potential_matches %}
-                    {% for like in potential_matches[:5] %}
-                        <div class="mb-2">
-                            <a href="{{ url_for('view_profile', user_id=like.user_id) }}">
-                                {{ like.user.get_full_name() or like.user.username }}
-                            </a> liked your profile!
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No one has liked your profile yet. Complete your profile to get noticed!</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header bg-warning">
-                <h5 class="mb-0"><i class="fas fa-newspaper"></i> Recent Forum Posts</h5>
-            </div>
-            <div class="card-body">
-                {% if recent_posts %}
-                    {% for post in recent_posts %}
-                        <div class="mb-2">
-                            <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
-                            <small class="text-muted d-block">by {{ post.author.username }}</small>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No forum posts yet. Be the first to share!</p>
-                {% endif %}
-                <a href="{{ url_for('forum') }}" class="btn btn-warning btn-sm w-100 mt-2">Visit Forum</a>
-            </div>
-        </div>
-    </div>
+<!-- Welcome header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h1 class="h3 fw-bold mb-1">
+      Welcome back, {{ current_user.get_full_name() or current_user.username }}!
+    </h1>
+    <p class="text-muted mb-0 small">Here's what's happening in your community today.</p>
+  </div>
+  <a href="{{ url_for('search') }}" class="btn btn-primary">
+    <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Find People
+  </a>
 </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-simple"></i> Your Profile Completion</h5>
-            </div>
-            <div class="card-body">
-                {% set completion = 0 %}
-                {% if current_user.first_name %} {% set completion = completion + 10 %} {% endif %}
-                {% if current_user.bio %} {% set completion = completion + 15 %} {% endif %}
-                {% if current_user.age %} {% set completion = completion + 10 %} {% endif %}
-                {% if current_user.location %} {% set completion = completion + 10 %} {% endif %}
-                {% if current_user.crime_type %} {% set completion = completion + 15 %} {% endif %}
-                {% if current_user.rehabilitation_status %} {% set completion = completion + 15 %} {% endif %}
-                {% if current_user.looking_for %} {% set completion = completion + 10 %} {% endif %}
-                {% if current_user.profile_pic != 'default.jpg' %} {% set completion = completion + 15 %} {% endif %}
-                
-                <div class="progress mb-3">
-                    <div class="progress-bar" role="progressbar" style="width: {{ completion }}%">{{ completion }}%</div>
-                </div>
-                {% if completion < 100 %}
-                    <a href="{{ url_for('profile') }}" class="btn btn-primary btn-sm">Complete Your Profile</a>
-                {% else %}
-                    <p class="text-success">Great job! Your profile is complete!</p>
-                {% endif %}
-            </div>
-        </div>
+<!-- ── Stat cards ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4" aria-label="Activity summary">
+  <div class="col-6 col-lg-3 animate-on-scroll delay-1">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(37,99,235,.12);color:var(--scc-primary);" aria-hidden="true">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="stat-number" id="stat-users" data-counter="0" aria-label="Total members">0</div>
+      <div class="stat-label">Total Members</div>
     </div>
+  </div>
+  <div class="col-6 col-lg-3 animate-on-scroll delay-2">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(16,185,129,.12);color:var(--scc-success);" aria-hidden="true">
+        <i class="fas fa-heart"></i>
+      </div>
+      <div class="stat-number" id="stat-matches" data-counter="0" aria-label="Total matches">0</div>
+      <div class="stat-label">Matches Made</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3 animate-on-scroll delay-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(124,58,237,.12);color:var(--scc-purple);" aria-hidden="true">
+        <i class="fas fa-envelope"></i>
+      </div>
+      <div class="stat-number" id="stat-messages" data-counter="0" aria-label="Total messages">0</div>
+      <div class="stat-label">Messages Sent</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3 animate-on-scroll delay-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(245,158,11,.12);color:var(--scc-secondary);" aria-hidden="true">
+        <i class="fas fa-newspaper"></i>
+      </div>
+      <div class="stat-number" id="stat-posts" data-counter="0" aria-label="Total forum posts">0</div>
+      <div class="stat-label">Forum Posts</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts row ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-7 animate-on-scroll">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="fas fa-chart-bar me-2 text-primary" aria-hidden="true"></i>Platform Overview</span>
+        <span class="badge bg-primary-subtle text-primary">All time</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="analytics-chart" aria-label="Platform statistics bar chart" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5 animate-on-scroll delay-1">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="fas fa-circle-dot me-2 text-primary" aria-hidden="true"></i>This Week</span>
+        <span class="badge bg-success-subtle text-success">7 days</span>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div class="chart-container w-100">
+          <canvas id="activity-chart" aria-label="This week activity doughnut chart" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Profile + matches row ─────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Profile completion -->
+  <div class="col-md-6 animate-on-scroll">
+    <div class="card h-100">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-circle-user me-2" aria-hidden="true"></i>Profile Completion
+      </div>
+      <div class="card-body">
+        {% set completion = 0 %}
+        {% if current_user.first_name %} {% set completion = completion + 10 %} {% endif %}
+        {% if current_user.bio %} {% set completion = completion + 15 %} {% endif %}
+        {% if current_user.age %} {% set completion = completion + 10 %} {% endif %}
+        {% if current_user.location %} {% set completion = completion + 10 %} {% endif %}
+        {% if current_user.crime_type %} {% set completion = completion + 15 %} {% endif %}
+        {% if current_user.rehabilitation_status %} {% set completion = completion + 15 %} {% endif %}
+        {% if current_user.looking_for %} {% set completion = completion + 10 %} {% endif %}
+        {% if current_user.profile_pic != 'default.jpg' %} {% set completion = completion + 15 %} {% endif %}
+
+        <div class="d-flex justify-content-between mb-2">
+          <span class="small fw-semibold">Progress</span>
+          <span class="small text-muted">{{ completion }}%</span>
+        </div>
+        <div class="progress mb-3" style="height:10px;" role="progressbar"
+             aria-valuenow="{{ completion }}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="Profile {{ completion }}% complete">
+          <div class="progress-bar" style="width:{{ completion }}%"></div>
+        </div>
+
+        {% if completion < 100 %}
+          <p class="text-muted small mb-3">Complete your profile to get more matches and appear in searches.</p>
+          <a href="{{ url_for('profile') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-pen me-1" aria-hidden="true"></i> Complete Profile
+          </a>
+        {% else %}
+          <p class="text-success mb-3"><i class="fas fa-circle-check me-1" aria-hidden="true"></i> Your profile is complete!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Your matches -->
+  <div class="col-md-6 animate-on-scroll delay-1">
+    <div class="card h-100">
+      <div class="card-header bg-success text-white">
+        <i class="fas fa-heart me-2" aria-hidden="true"></i>Your Matches
+        {% if matches %}
+          <span class="badge bg-white text-success ms-1">{{ matches | length }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if matches %}
+          <ul class="list-unstyled mb-0">
+            {% for match in matches %}
+              {% set other = match.user2 if match.user1_id == current_user.id else match.user1 %}
+              <li class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="profile-avatar" style="width:36px;height:36px;font-size:.8rem;" aria-hidden="true">
+                    {{ (other.get_full_name() or other.username)[0].upper() }}
+                  </div>
+                  <a href="{{ url_for('view_profile', user_id=other.id) }}" class="fw-semibold text-decoration-none">
+                    {{ other.get_full_name() or other.username }}
+                  </a>
+                </div>
+                <a href="{{ url_for('conversation', user_id=other.id) }}" class="btn btn-outline-success btn-sm">
+                  <i class="fas fa-envelope" aria-hidden="true"></i>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-3">No matches yet. Start connecting with people!</p>
+          <a href="{{ url_for('search') }}" class="btn btn-success btn-sm">
+            <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Find Matches
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Messages + recent activity row ────────────────────────── -->
+<div class="row g-3">
+
+  <!-- Messages summary -->
+  <div class="col-md-4 animate-on-scroll">
+    <div class="card h-100">
+      <div class="card-header" style="background:var(--scc-purple);color:#fff;">
+        <i class="fas fa-envelope me-2" aria-hidden="true"></i>Messages
+      </div>
+      <div class="card-body text-center py-4">
+        <div class="display-4 fw-bold
+          {% if unread_messages > 0 %}text-primary badge-pulse{% else %}text-muted{% endif %}">
+          {{ unread_messages }}
+        </div>
+        <p class="text-muted mb-3">Unread message{{ 's' if unread_messages != 1 else '' }}</p>
+        <a href="{{ url_for('messages') }}" class="btn btn-sm"
+           style="background:var(--scc-purple);color:#fff;">
+          View All Messages
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent interests -->
+  <div class="col-md-4 animate-on-scroll delay-1">
+    <div class="card h-100">
+      <div class="card-header bg-warning text-dark">
+        <i class="fas fa-star me-2" aria-hidden="true"></i>Recent Interest
+      </div>
+      <div class="card-body">
+        {% if potential_matches %}
+          <ul class="list-unstyled mb-0">
+            {% for like in potential_matches[:5] %}
+              <li class="d-flex align-items-center gap-2 py-2 border-bottom">
+                <div class="profile-avatar" style="width:32px;height:32px;font-size:.75rem;" aria-hidden="true">
+                  {{ (like.user.get_full_name() or like.user.username)[0].upper() }}
+                </div>
+                <a href="{{ url_for('view_profile', user_id=like.user_id) }}" class="text-decoration-none small">
+                  {{ like.user.get_full_name() or like.user.username }}
+                </a>
+                <span class="ms-auto badge bg-warning text-dark">Liked you</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small">Complete your profile to start getting noticed!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent forum posts -->
+  <div class="col-md-4 animate-on-scroll delay-2">
+    <div class="card h-100">
+      <div class="card-header" style="background:var(--scc-success);color:#fff;">
+        <i class="fas fa-newspaper me-2" aria-hidden="true"></i>Recent Forum
+      </div>
+      <div class="card-body">
+        {% if recent_posts %}
+          <ul class="list-unstyled mb-0">
+            {% for post in recent_posts %}
+              <li class="py-2 border-bottom">
+                <a href="{{ url_for('view_post', post_id=post.id) }}" class="text-decoration-none small fw-semibold d-block text-truncate">
+                  {{ post.title }}
+                </a>
+                <span class="text-muted" style="font-size:.75rem;">by {{ post.author.username }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small">No posts yet.</p>
+        {% endif %}
+        <a href="{{ url_for('forum') }}" class="btn btn-sm mt-3 w-100"
+           style="background:var(--scc-success);color:#fff;">
+          Visit Forum
+        </a>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

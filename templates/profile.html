@@ -1,89 +1,157 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Profile</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand" href="{{ url_for('index') }}">ConvictCode</a>
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a class="nav-link" href="{{ url_for('forum') }}">Forum</a>
-        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
-        <a class="nav-link" href="{{ url_for('messages') }}">Messages</a>
-        <a class="nav-link" href="{{ url_for('matches') }}">Matches</a>
-        <a class="nav-link active" href="{{ url_for('profile') }}">Profile</a>
+{% extends "base.html" %}
+
+{% block title %}Edit Profile — SecondChance Connect{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="profile-avatar" aria-hidden="true" style="width:56px;height:56px;font-size:1.3rem;">
+    {{ (user.get_full_name() or user.username)[0].upper() }}
+  </div>
+  <div>
+    <h1 class="h3 fw-bold mb-0">{{ user.get_full_name() or user.username }}</h1>
+    <p class="text-muted mb-0 small">@{{ user.username }}</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Profile form -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header fw-semibold">
+        <i class="fas fa-pen me-2 text-primary" aria-hidden="true"></i>Edit Your Profile
       </div>
-    </div>
-  </nav>
-
-  {% set target_user = user if user is defined else (profile_user if profile_user is defined else (view_user if view_user is defined else current_user)) %}
-
-  <main class="container py-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="card shadow-sm">
       <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-          <div>
-            <h1 class="h3 mb-1">
-              {{ target_user.username if target_user is defined and target_user and target_user.username is defined else 'Profile' }}
-            </h1>
-            <p class="text-muted mb-0">
-              {{ target_user.email if target_user is defined and target_user and target_user.email is defined else '' }}
-            </p>
-          </div>
-          <div>
-            <button type="button"
-                    class="btn btn-outline-primary like-btn"
-                    data-user-id="{{ target_user.id if target_user is defined and target_user and target_user.id is defined else '' }}">
-              Like
-            </button>
-          </div>
-        </div>
+        <form method="post" novalidate aria-label="Profile edit form">
+          {{ form.hidden_tag() }}
 
-        <hr>
-
-        <div class="row g-3">
-          <div class="col-md-8">
-            <h2 class="h5">About</h2>
-            <p class="mb-0">
-              {% if target_user is defined and target_user and target_user.bio is defined and target_user.bio %}
-                {{ target_user.bio }}
-              {% else %}
-                No bio available.
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.first_name.id }}">First Name</label>
+              {{ form.first_name(class="form-control", placeholder="Your first name") }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small mt-1">{{ form.first_name.errors[0] }}</div>
               {% endif %}
-            </p>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.last_name.id }}">Last Name</label>
+              {{ form.last_name(class="form-control", placeholder="Your last name") }}
+              {% if form.last_name.errors %}
+                <div class="text-danger small mt-1">{{ form.last_name.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="{{ form.age.id }}">Age</label>
+              {{ form.age(class="form-control", placeholder="Age") }}
+              {% if form.age.errors %}
+                <div class="text-danger small mt-1">{{ form.age.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="{{ form.gender.id }}">Gender</label>
+              {{ form.gender(class="form-select") }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="{{ form.location.id }}">Location</label>
+              {{ form.location(class="form-control", placeholder="City, State") }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="{{ form.bio.id }}">
+                Bio <span class="text-muted fw-normal">(max 500 chars)</span>
+              </label>
+              {{ form.bio(class="form-control", rows=4, maxlength=500, placeholder="Tell others about yourself…") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.crime_type.id }}">Offense Type</label>
+              {{ form.crime_type(class="form-control", placeholder="Optional — be as specific or vague as you like") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.release_date.id }}">Release Date</label>
+              {{ form.release_date(class="form-control", placeholder="e.g. Jan 2023") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.rehabilitation_status.id }}">Rehabilitation Status</label>
+              {{ form.rehabilitation_status(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ form.looking_for.id }}">Looking For</label>
+              {{ form.looking_for(class="form-control", placeholder="e.g. Friendship, Support, Romance") }}
+            </div>
           </div>
-          <div class="col-md-4">
-            <h2 class="h5">Details</h2>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item px-0">
-                User ID: {{ target_user.id if target_user is defined and target_user and target_user.id is defined else 'N/A' }}
-              </li>
-              <li class="list-group-item px-0">
-                Status: {{ 'Authenticated' if current_user is defined and current_user.is_authenticated else 'Guest' }}
-              </li>
-            </ul>
+
+          <hr class="my-4">
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="fas fa-save me-1" aria-hidden="true"></i> Save Changes
+            </button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
           </div>
-        </div>
+        </form>
       </div>
     </div>
-  </main>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">
+        <i class="fas fa-circle-check me-2 text-success" aria-hidden="true"></i>Completion
+      </div>
+      <div class="card-body">
+        {% set completion = 0 %}
+        {% if user.first_name %} {% set completion = completion + 10 %} {% endif %}
+        {% if user.bio %} {% set completion = completion + 15 %} {% endif %}
+        {% if user.age %} {% set completion = completion + 10 %} {% endif %}
+        {% if user.location %} {% set completion = completion + 10 %} {% endif %}
+        {% if user.crime_type %} {% set completion = completion + 15 %} {% endif %}
+        {% if user.rehabilitation_status %} {% set completion = completion + 15 %} {% endif %}
+        {% if user.looking_for %} {% set completion = completion + 10 %} {% endif %}
+        {% if user.profile_pic != 'default.jpg' %} {% set completion = completion + 15 %} {% endif %}
+        <div class="progress mb-2" style="height:8px;">
+          <div class="progress-bar" style="width:{{ completion }}%"
+               role="progressbar" aria-valuenow="{{ completion }}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="{{ completion }}% complete"></div>
+        </div>
+        <small class="text-muted">{{ completion }}% complete</small>
+
+        <ul class="list-unstyled mt-3 small">
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.first_name %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            First name
+          </li>
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.bio %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            Bio
+          </li>
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.age %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            Age
+          </li>
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.location %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            Location
+          </li>
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.rehabilitation_status %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            Rehabilitation status
+          </li>
+          <li class="d-flex align-items-center gap-2 mb-1">
+            <i class="fas fa-{% if user.looking_for %}check text-success{% else %}xmark text-danger{% endif %}" aria-hidden="true"></i>
+            Looking for
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body text-center">
+        <a href="{{ url_for('view_profile', user_id=user.id) }}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+          <i class="fas fa-eye me-1" aria-hidden="true"></i> Preview Public Profile
+        </a>
+        <a href="{{ url_for('search') }}" class="btn btn-outline-secondary btn-sm w-100">
+          <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Find People
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
