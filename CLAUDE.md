@@ -101,18 +101,18 @@ All models in `database.py` (SQLAlchemy declarative). Tables are auto-created on
 
 - **Single-file app**: keep route handlers in `app.py` and models in `database.py`. Larger features should still land here unless we agree on splitting into blueprints.
 - **`connectors.md` is canonical** integration documentation. If you change DB models, env vars, or the auth/CSRF/gunicorn/Anthropic wiring, **update `connectors.md` and `tests/test_connectors.py` in the same change** — the test suite checks the docs against the code.
-- **CSRF**: all standard forms use Flask-WTF tokens. Known gap: the `/forum/post/<id>/comment` endpoint accepts JSON without a CSRF token — preserve or fix this deliberately, don't break other forms by accident.
+- **CSRF**: `CSRFProtect(app)` is initialized globally in `app.py`, so all POST routes (including `/forum/post/<id>/comment`, which accepts form data) are protected by default. If you ever exempt a route with `@csrf.exempt`, document why.
 - **Passwords**: always via `generate_password_hash` / `check_password_hash`. Never log password fields.
 - **Templates**: extend `base.html`. Bootstrap classes are fine; add custom styles in `static/css/style.css`.
 - **Resources data** is currently hardcoded in `app.py` (18 entries). Migrate to a DB table if/when this grows.
 
 ## CI/CD
 
-`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions), an additional "Bodeql" workflow, and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
+`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions), a duplicate `Bodeql.yml` workflow (likely a typo of CodeQL — see TODO below), and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
 
 ## Known TODOs
 
 - Replace `dev-secret-key-change-in-production` for any non-local environment.
-- Add CSRF protection to `/forum/post/<id>/comment`.
 - Paginate `/messages`, `/matches`, and search results once the user base grows.
 - `templates/profile.htnml` is an empty/typo file — delete or rename if you touch profile templates.
+- The `Bodeql.yml` workflow is a typo of `CodeQL.yml` and likely redundant with `codeql.yml` — rename or remove next time you touch CI.
