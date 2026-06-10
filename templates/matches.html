@@ -1,71 +1,71 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Matches</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand" href="{{ url_for('index') }}">ConvictCode</a>
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a class="nav-link" href="{{ url_for('forum') }}">Forum</a>
-        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
-        <a class="nav-link" href="{{ url_for('messages') }}">Messages</a>
-        <a class="nav-link active" href="{{ url_for('matches') }}">Matches</a>
-        <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
-      </div>
-    </div>
-  </nav>
+{% extends "base.html" %}
 
-  <main class="container py-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+{% block title %}Your Matches — SecondChance Connect{% endblock %}
 
-    <h1 class="h3 mb-3">Matches</h1>
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <h1 class="h3 fw-bold mb-0">
+    <i class="fas fa-heart me-2 text-danger" aria-hidden="true"></i>Your Matches
+    {% if matches %}
+      <span class="badge bg-danger-subtle text-danger ms-1">{{ matches | length }}</span>
+    {% endif %}
+  </h1>
+  <a href="{{ url_for('search') }}" class="btn btn-primary">
+    <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Find More People
+  </a>
+</div>
 
-    <div class="row g-3">
-      {% if matches is defined and matches %}
-        {% for match in matches %}
-          <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <h2 class="h5 card-title">
-                  {{ match.username if match.username is defined else match.name if match.name is defined else 'Match' }}
+{% if matches %}
+  <div class="row g-3">
+    {% for match in matches %}
+      <div class="col-sm-6 col-lg-4 animate-on-scroll delay-{{ loop.index0 % 4 + 1 }}">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="profile-avatar" aria-hidden="true">
+                {{ (match.get_full_name() or match.username)[0].upper() }}
+              </div>
+              <div class="min-w-0">
+                <h2 class="h6 fw-semibold mb-0 text-truncate">
+                  {{ match.get_full_name() or match.username }}
                 </h2>
-                <p class="card-text text-muted mb-3">
-                  {% if match.bio is defined and match.bio %}
-                    {{ match.bio }}
-                  {% else %}
-                    Suggested match
-                  {% endif %}
-                </p>
-                {% if match.id is defined %}
-                  <span class="badge text-bg-secondary">ID {{ match.id }}</span>
-                {% endif %}
+                <span class="text-muted small">@{{ match.username }}</span>
               </div>
             </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="col-12">
-          <div class="alert alert-info mb-0">No matches available.</div>
-        </div>
-      {% endif %}
-    </div>
-  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+            {% if match.location %}
+              <p class="small text-muted mb-1">
+                <i class="fas fa-location-dot me-1" aria-hidden="true"></i>{{ match.location }}
+              </p>
+            {% endif %}
+            {% if match.bio %}
+              <p class="small text-muted mb-0 text-truncate-2">{{ match.bio }}</p>
+            {% else %}
+              <p class="small text-muted mb-0 fst-italic">No bio yet.</p>
+            {% endif %}
+          </div>
+          <div class="card-footer bg-transparent border-top d-flex gap-2">
+            <a href="{{ url_for('view_profile', user_id=match.id) }}"
+               class="btn btn-outline-primary btn-sm flex-fill">
+              <i class="fas fa-user me-1" aria-hidden="true"></i> Profile
+            </a>
+            <a href="{{ url_for('conversation', user_id=match.id) }}"
+               class="btn btn-success btn-sm flex-fill">
+              <i class="fas fa-envelope me-1" aria-hidden="true"></i> Message
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center py-5">
+    <i class="fas fa-heart-crack fa-3x text-muted mb-3" aria-hidden="true"></i>
+    <h2 class="h5 text-muted">No matches yet</h2>
+    <p class="text-muted small">When you and another member like each other, you'll connect here.</p>
+    <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
+      <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Start Connecting
+    </a>
+  </div>
+{% endif %}
+{% endblock %}

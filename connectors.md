@@ -79,7 +79,15 @@ Never commit `.env` to version control — it is listed in `.gitignore`.
 
 ## CSRF Protection
 
-**Flask-WTF** provides CSRF token validation for submissions using `FlaskForm`. The `SECRET_KEY` environment variable is used to sign tokens. Note that routes not using `FlaskForm` (such as `add_comment`) currently lack CSRF protection — global `CSRFProtect` is not initialised in `app.py`.
+**Flask-WTF** provides CSRF token validation. Global `CSRFProtect` **is initialised** in `app.py`:
+
+```python
+csrf = CSRFProtect(app)
+```
+
+This protects **every** POST route by default, including routes that read `request.form` directly (such as `add_comment`) rather than via a `FlaskForm`. The `SECRET_KEY` environment variable is used to sign tokens.
+
+The only exempted route is the JSON chatbot endpoint `/api/chat`, which is decorated with `@csrf.exempt` because it is called via `fetch()` with a JSON body and protected by `@login_required`. A `CSRFError` handler flashes a friendly message and redirects rather than returning a raw 400.
 
 ---
 

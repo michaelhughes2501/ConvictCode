@@ -383,9 +383,10 @@ class TestAuthenticationDocumentation(unittest.TestCase):
 
 class TestCsrfProtectionDocumentation(unittest.TestCase):
     """
-    connectors.md documents specific CSRF protection gaps:
-    - add_comment uses request.form (not FlaskForm) → no CSRF
-    - CSRFProtect is NOT globally initialized
+    connectors.md documents the CSRF protection wiring:
+    - add_comment uses request.form (not FlaskForm) but is still protected
+      because CSRFProtect is initialised globally
+    - CSRFProtect IS globally initialized via CSRFProtect(app)
     """
 
     @classmethod
@@ -419,22 +420,23 @@ class TestCsrfProtectionDocumentation(unittest.TestCase):
         self.assertNotIn("FlaskForm", body)
         self.assertNotIn("Form()", body)
 
-    def test_csrf_protect_not_globally_initialized(self):
+    def test_csrf_protect_globally_initialized(self):
         """
-        connectors.md explicitly states CSRFProtect is NOT initialised globally.
-        Verify that CSRFProtect() is not called in app.py.
+        connectors.md states CSRFProtect IS initialised globally.
+        Verify that CSRFProtect(app) is called in app.py.
         """
-        # Allow import of CSRFProtect but not its instantiation/initialization
-        self.assertNotIn("CSRFProtect(app)", self.app_source)
-        self.assertNotIn("csrf = CSRFProtect(", self.app_source)
-        self.assertNotIn("csrf.init_app(", self.app_source)
+        self.assertIn("CSRFProtect(app)", self.app_source)
 
-    def test_md_mentions_add_comment_lacks_csrf(self):
+    def test_chat_endpoint_is_csrf_exempt(self):
+        """The JSON chatbot endpoint must be explicitly exempted from CSRF."""
+        self.assertIn("@csrf.exempt", self.app_source)
+
+    def test_md_mentions_add_comment(self):
         self.assertIn("add_comment", self.md_content)
 
-    def test_md_states_csrf_protect_not_initialized(self):
+    def test_md_states_csrf_protect_initialized(self):
         self.assertIn("CSRFProtect", self.md_content)
-        self.assertIn("not initialised", self.md_content)
+        self.assertIn("is initialised", self.md_content)
 
     def test_md_secret_key_used_for_csrf_signing(self):
         """connectors.md must mention SECRET_KEY is used to sign CSRF tokens."""
