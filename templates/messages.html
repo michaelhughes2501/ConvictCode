@@ -1,72 +1,64 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Messages</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand" href="{{ url_for('index') }}">ConvictCode</a>
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a class="nav-link" href="{{ url_for('forum') }}">Forum</a>
-        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
-        <a class="nav-link active" href="{{ url_for('messages') }}">Messages</a>
-        <a class="nav-link" href="{{ url_for('matches') }}">Matches</a>
-        <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
-      </div>
-    </div>
-  </nav>
+{% extends "base.html" %}
 
-  <main class="container py-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+{% block title %}Messages — SecondChance Connect{% endblock %}
 
-    <h1 class="h3 mb-3">Messages</h1>
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <h1 class="h3 fw-bold mb-0">
+    <i class="fas fa-envelope me-2 text-primary" aria-hidden="true"></i>Messages
+  </h1>
+  <a href="{{ url_for('matches') }}" class="btn btn-outline-primary">
+    <i class="fas fa-heart me-1" aria-hidden="true"></i> Your Matches
+  </a>
+</div>
 
-    <div class="list-group shadow-sm">
-      {% if conversations is defined and conversations %}
-        {% for conversation in conversations %}
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center gap-3">
-              <div>
-                <h2 class="h5 mb-1">
-                  {{ conversation.username if conversation.username is defined else conversation.partner if conversation.partner is defined else 'Conversation' }}
-                </h2>
-                <p class="mb-0 text-muted">
-                  {{ conversation.preview if conversation.preview is defined else conversation.last_message if conversation.last_message is defined else '' }}
-                </p>
+{% if conversations %}
+  <div class="card animate-on-scroll">
+    <ul class="list-group list-group-flush">
+      {% for convo in conversations %}
+        {% set partner = convo.user %}
+        {% if partner %}
+          <li class="list-group-item p-0">
+            <a href="{{ url_for('conversation', user_id=partner.id) }}"
+               class="d-flex align-items-center gap-3 p-3 text-decoration-none text-reset conversation-row">
+              <div class="profile-avatar" style="width:48px;height:48px;font-size:1rem;" aria-hidden="true">
+                {{ (partner.get_full_name() or partner.username)[0].upper() }}
               </div>
-              {% if conversation.unread_count is defined %}
-                <span class="badge text-bg-primary">{{ conversation.unread_count }} unread</span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <span class="fw-semibold text-truncate">{{ partner.get_full_name() or partner.username }}</span>
+                  {% if convo.last_message and convo.last_message.created_at %}
+                    <small class="text-muted flex-shrink-0">
+                      {{ convo.last_message.created_at.strftime('%b %d') }}
+                    </small>
+                  {% endif %}
+                </div>
+                <div class="text-muted small text-truncate">
+                  {% if convo.last_message %}
+                    {% if convo.last_message.sender_id == current_user.id %}<span class="text-muted">You: </span>{% endif %}
+                    {{ convo.last_message.message }}
+                  {% else %}
+                    <span class="fst-italic">No messages yet</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if convo.unread_count and convo.unread_count > 0 %}
+                <span class="badge bg-primary rounded-pill flex-shrink-0 badge-pulse">{{ convo.unread_count }}</span>
               {% endif %}
-            </div>
-          </div>
-        {% endfor %}
-      {% elif messages is defined and messages %}
-        {% for message in messages %}
-          <div class="list-group-item">
-            <strong>{{ message.sender if message.sender is defined else 'Message' }}</strong>
-            <div>{{ message.content if message.content is defined else message.body if message.body is defined else '' }}</div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="list-group-item">No messages yet.</div>
-      {% endif %}
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <div class="text-center py-5">
+    <i class="fas fa-comment-dots fa-3x text-muted mb-3" aria-hidden="true"></i>
+    <h2 class="h5 text-muted">No conversations yet</h2>
+    <p class="text-muted small">Match with someone to start a private conversation.</p>
+    <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
+      <i class="fas fa-magnifying-glass me-1" aria-hidden="true"></i> Find People
+    </a>
+  </div>
+{% endif %}
+{% endblock %}

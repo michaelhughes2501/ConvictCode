@@ -636,6 +636,24 @@ body {
   pointer-events: none;
 }
 
+/* ── Utility helpers ───────────────────────────────────────────── */
+.min-w-0 { min-width: 0; }
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Conversation list rows */
+.conversation-row {
+  transition: background-color var(--transition);
+}
+.conversation-row:hover {
+  background: var(--bs-secondary-bg);
+}
+
 /* ── Footer ────────────────────────────────────────────────────── */
 footer {
   margin-top: 4rem;

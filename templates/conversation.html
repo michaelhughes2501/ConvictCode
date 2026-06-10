@@ -1,125 +1,85 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conversation</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand" href="{{ url_for('index') }}">ConvictCode</a>
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a class="nav-link" href="{{ url_for('forum') }}">Forum</a>
-        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
-        <a class="nav-link active" href="{{ url_for('messages') }}">Messages</a>
-        <a class="nav-link" href="{{ url_for('matches') }}">Matches</a>
-        <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+{% extends "base.html" %}
+
+{% block title %}Chat with {{ other_user.get_full_name() or other_user.username }} — SecondChance Connect{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+
+    <!-- Conversation header -->
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <a href="{{ url_for('messages') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to messages">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+      </a>
+      <div class="profile-avatar" style="width:46px;height:46px;font-size:1rem;" aria-hidden="true">
+        {{ (other_user.get_full_name() or other_user.username)[0].upper() }}
       </div>
-    </div>
-  </nav>
-
-  {% set thread_user = user if user is defined else (other_user if other_user is defined else (conversation.user if conversation is defined and conversation.user is defined else none)) %}
-
-  <main class="container py-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <h1 class="h3 mb-1">
-          {% if thread_user is defined and thread_user and thread_user.username is defined %}
-            Conversation with {{ thread_user.username }}
-          {% else %}
-            Conversation
-          {% endif %}
-        </h1>
-        <p class="text-muted mb-0">Private messages</p>
+      <div>
+        <a href="{{ url_for('view_profile', user_id=other_user.id) }}"
+           class="h5 fw-bold mb-0 d-block text-decoration-none text-reset">
+          {{ other_user.get_full_name() or other_user.username }}
+        </a>
+        <span class="text-muted small">@{{ other_user.username }}</span>
       </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
+    <!-- Message thread -->
+    <div class="card mb-3 animate-on-scroll">
       <div class="card-body">
-        {% if messages is defined and messages %}
-          <div class="vstack gap-3">
+        <div class="message-container" id="message-container">
+          {% if messages %}
             {% for message in messages %}
-              <div class="border rounded p-3 bg-white">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <strong>{{ message.sender if message.sender is defined else 'Message' }}</strong>
-                  {% if message.created_at is defined %}
-                    <small class="text-muted">{{ message.created_at }}</small>
-                  {% endif %}
-                </div>
-                <div>{{ message.content if message.content is defined else message.body if message.body is defined else '' }}</div>
-              </div>
-            {% endfor %}
-          </div>
-        {% elif conversation is defined and conversation.messages is defined and conversation.messages %}
-          <div class="vstack gap-3">
-            {% for message in conversation.messages %}
-              <div class="border rounded p-3 bg-white">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <strong>{{ message.sender if message.sender is defined else 'Message' }}</strong>
-                  {% if message.created_at is defined %}
-                    <small class="text-muted">{{ message.created_at }}</small>
-                  {% endif %}
-                </div>
-                <div>{{ message.content if message.content is defined else message.body if message.body is defined else '' }}</div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="alert alert-info mb-0">No messages in this conversation yet.</div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h2 class="h5 mb-3">Reply</h2>
-        {% if form is defined %}
-          <form method="post" novalidate>
-            {{ form.hidden_tag() }}
-            {% for field in form if field.name not in ['csrf_token', 'submit', 'hidden_tag'] and field.type not in ['CSRFTokenField', 'HiddenField'] %}
-              <div class="mb-3">
-                {{ field.label(class="form-label") }}
-                {% if field.type == 'TextAreaField' %}
-                  {{ field(class="form-control", rows="4") }}
-                {% else %}
-                  {{ field(class="form-control") }}
-                {% endif %}
-                {% if field.errors %}
-                  <div class="text-danger small mt-1">
-                    {% for error in field.errors %}
-                      <div>{{ error }}</div>
-                    {% endfor %}
+              {% set is_sent = message.sender_id == current_user.id %}
+              <div class="message-bubble {{ 'message-sent' if is_sent else 'message-received' }}">
+                <div style="white-space:pre-wrap;">{{ message.message }}</div>
+                {% if message.created_at %}
+                  <div class="small mt-1 {{ 'text-white-50' if is_sent else 'text-muted' }}"
+                       style="font-size:.7rem;">
+                    {{ message.created_at.strftime('%b %d, %Y · %I:%M %p') }}
                   </div>
                 {% endif %}
               </div>
             {% endfor %}
-            {% if form.submit is defined %}
-              {{ form.submit(class="btn btn-primary") }}
-            {% else %}
-              <button type="submit" class="btn btn-primary">Send</button>
-            {% endif %}
-          </form>
-        {% else %}
-          <div class="alert alert-warning mb-0">No reply form is available.</div>
-        {% endif %}
+          {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="fas fa-comment-dots fa-2x mb-2 d-block" aria-hidden="true"></i>
+              Say hello to start the conversation.
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
-  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- Reply form (CSRF protected via form.hidden_tag) -->
+    <div class="card animate-on-scroll delay-1">
+      <div class="card-body">
+        <form method="post" aria-label="Send a message">
+          {{ form.hidden_tag() }}
+          <div class="input-group">
+            {{ form.message(class="form-control", rows="2",
+                            placeholder="Type your message…",
+                            maxlength="1000",
+                            aria_label="Message text") }}
+            <button type="submit" class="btn btn-primary px-3" aria-label="Send message">
+              <i class="fas fa-paper-plane" aria-hidden="true"></i>
+            </button>
+          </div>
+          {% if form.message.errors %}
+            <div class="text-danger small mt-1" role="alert">{{ form.message.errors[0] }}</div>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var c = document.getElementById('message-container');
+    if (c) { c.scrollTop = c.scrollHeight; }
+  })();
+</script>
+{% endblock %}
