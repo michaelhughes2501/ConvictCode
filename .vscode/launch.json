@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flask: Run Dev Server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "args": ["run", "--debugger"],
+      "jinja": true,
+      "env": {
+        "FLASK_APP": "app.py",
+        "FLASK_ENV": "development",
+        "FLASK_DEBUG": "1"
+      },
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Python: app.py",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}
