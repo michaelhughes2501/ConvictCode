@@ -396,7 +396,7 @@ def handle_csrf_error(e):
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.utcnow().year}
+    return {'current_year': datetime.now().year}
 
 with app.app_context():
     db.create_all()
