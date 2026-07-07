@@ -35,7 +35,13 @@
 
           <div class="mb-3">
             <label class="form-label fw-semibold" for="{{ form.password.id }}">Password</label>
-            {{ form.password(class="form-control", placeholder="Min 6 characters", autocomplete="new-password") }}
+            <div class="input-group password-toggle-group">
+              {{ form.password(class="form-control", placeholder="Min 6 characters", autocomplete="new-password") }}
+              <button class="btn btn-outline-secondary password-toggle-btn" type="button"
+                      aria-label="Show password" aria-pressed="false" data-target="{{ form.password.id }}">
+                <i class="fas fa-eye" aria-hidden="true"></i>
+              </button>
+            </div>
             {% if form.password.errors %}
               <div class="text-danger small mt-1" role="alert">{{ form.password.errors[0] }}</div>
             {% endif %}
@@ -43,7 +49,13 @@
 
           <div class="mb-4">
             <label class="form-label fw-semibold" for="{{ form.confirm_password.id }}">Confirm Password</label>
-            {{ form.confirm_password(class="form-control", placeholder="Repeat your password", autocomplete="new-password") }}
+            <div class="input-group password-toggle-group">
+              {{ form.confirm_password(class="form-control", placeholder="Repeat your password", autocomplete="new-password") }}
+              <button class="btn btn-outline-secondary password-toggle-btn" type="button"
+                      aria-label="Show password" aria-pressed="false" data-target="{{ form.confirm_password.id }}">
+                <i class="fas fa-eye" aria-hidden="true"></i>
+              </button>
+            </div>
             {% if form.confirm_password.errors %}
               <div class="text-danger small mt-1" role="alert">{{ form.confirm_password.errors[0] }}</div>
             {% endif %}

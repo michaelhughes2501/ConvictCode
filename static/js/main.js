@@ -91,6 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
     update();
   });
 
+  /* 7b. Password show/hide toggles (login/register) ─────────── */
+  $$('.password-toggle-btn').forEach(btn => {
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    btn.addEventListener('click', () => {
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.innerHTML = showing
+        ? '<i class="fas fa-eye" aria-hidden="true"></i>'
+        : '<i class="fas fa-eye-slash" aria-hidden="true"></i>';
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      btn.setAttribute('aria-pressed', String(!showing));
+    });
+  });
+
   /* 8. Like buttons (AJAX) ──────────────────────────────────── */
   $$('.like-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
