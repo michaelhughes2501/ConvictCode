@@ -94,15 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /* 7b. Password show/hide toggles (login/register) ─────────── */
   $$('.password-toggle-btn').forEach(btn => {
     const input = document.getElementById(btn.dataset.target);
-    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (!input || !icon) return;
     btn.addEventListener('click', () => {
       const showing = input.type === 'text';
       input.type = showing ? 'password' : 'text';
-      btn.innerHTML = showing
-        ? '<i class="fas fa-eye" aria-hidden="true"></i>'
-        : '<i class="fas fa-eye-slash" aria-hidden="true"></i>';
+      icon.className = showing ? 'fas fa-eye' : 'fas fa-eye-slash';
       btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
-      btn.setAttribute('aria-pressed', String(!showing));
     });
   });
 
