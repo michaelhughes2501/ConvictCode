@@ -394,6 +394,10 @@ def handle_csrf_error(e):
     flash('Security token expired. Please try again.', 'danger')
     return redirect(request.referrer or url_for('index'))
 
+@app.context_processor
+def inject_current_year():
+    return {'current_year': datetime.utcnow().year}
+
 with app.app_context():
     db.create_all()
 
