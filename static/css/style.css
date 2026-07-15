@@ -341,6 +341,7 @@ body {
 .pagination .page-item.active .page-link {
   background: var(--scc-primary);
   border-color: var(--scc-primary);
+  color: #fff;
 }
 
 /* ── Focus visibility (accessibility) ─────────────────────────── */
