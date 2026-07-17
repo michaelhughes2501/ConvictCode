@@ -106,7 +106,7 @@
 
 {% else %}
   <div class="text-center py-5">
-    <i class="fas fa-comment-slash fa-3x text-muted mb-3" aria-hidden="true"></i>
+    <div class="empty-state-icon mb-3" aria-hidden="true"><i class="fas fa-comment-slash"></i></div>
     <h2 class="h5 text-muted">No posts yet in this category</h2>
     {% if current_user.is_authenticated %}
       <a href="{{ url_for('new_post') }}" class="btn btn-primary mt-2">

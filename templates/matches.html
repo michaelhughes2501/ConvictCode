@@ -60,7 +60,7 @@
   </div>
 {% else %}
   <div class="text-center py-5">
-    <i class="fas fa-heart-crack fa-3x text-muted mb-3" aria-hidden="true"></i>
+    <div class="empty-state-icon mb-3" aria-hidden="true"><i class="fas fa-heart-crack"></i></div>
     <h2 class="h5 text-muted">No matches yet</h2>
     <p class="text-muted small">When you and another member like each other, you'll connect here.</p>
     <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
