@@ -205,7 +205,7 @@ def messages():
         user_ids.add(conv[0])
     conversations = []
     for uid in user_ids:
-        user = User.query.get(uid)
+        user = db.session.get(User, uid)
         last_message = Message.query.filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == uid)) |
             ((Message.sender_id == uid) & (Message.recipient_id == current_user.id))
