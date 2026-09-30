@@ -8,7 +8,6 @@ reflect the actual implementation in app.py and database.py.
 import ast
 import os
 import re
-import sys
 import unittest
 
 # Paths relative to this file's location (tests/)
