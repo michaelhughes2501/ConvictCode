@@ -108,11 +108,9 @@ All models in `database.py` (SQLAlchemy declarative). Tables are auto-created on
 
 ## CI/CD
 
-`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions), a duplicate `Bodeql.yml` workflow (likely a typo of CodeQL — see TODO below), and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
+`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions) and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
 
 ## Known TODOs
 
 - Replace `dev-secret-key-change-in-production` for any non-local environment.
 - Paginate `/messages`, `/matches`, and search results once the user base grows.
-- `templates/profile.htnml` is an empty/typo file — delete or rename if you touch profile templates.
-- The `Bodeql.yml` workflow is a typo of `CodeQL.yml` and likely redundant with `codeql.yml` — rename or remove next time you touch CI.
