@@ -97,7 +97,7 @@
         <ul class="navbar-nav ms-auto align-items-center gap-1">
           <!-- Dark mode toggle -->
           <li class="nav-item">
-            <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
               <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
           </li>
@@ -178,13 +178,13 @@
   </footer>
 
   <!-- ── Scroll-to-top ───────────────────────────────────────── -->
-  <button id="scroll-top" aria-label="Scroll to top" title="Back to top">
+  <button id="scroll-top" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fas fa-chevron-up" aria-hidden="true"></i>
   </button>
 
   {% if current_user.is_authenticated %}
   <!-- ── AI Chatbot widget ────────────────────────────────────── -->
-  <button id="chatbot-fab" aria-label="Open support chat" aria-expanded="false">
+  <button id="chatbot-fab" type="button" aria-label="Open support chat" aria-expanded="false">
     <i class="fas fa-robot" aria-hidden="true"></i>
   </button>
 
@@ -195,7 +195,7 @@
         <h6>Support Assistant</h6>
         <small>Powered by Claude AI</small>
       </div>
-      <button id="chatbot-close" class="chatbot-close" aria-label="Close chat">
+      <button id="chatbot-close" class="chatbot-close" type="button" aria-label="Close chat">
         <i class="fas fa-times" aria-hidden="true"></i>
       </button>
     </div>
