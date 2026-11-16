@@ -66,7 +66,7 @@ ConvictCode/
 │     package dir, so this top-level `templates/` stops being discovered automatically.
 │     Either move `templates/` and `static/` under `convictcode/`, or pass
 │     `Flask(__name__, template_folder='../templates', static_folder='../static')`
-│     when the factory runs. See the call-out below.
+│     when the factory runs. See the "Templates/static paths" call-out below.
 │
 ├── instance/                          ← existing; still gitignored; still holds SQLite dev DB
 │
@@ -105,6 +105,7 @@ ConvictCode/
 - **`database.py` moves to `convictcode/models.py`.** The rename is deliberate — "database.py" was a file-purpose label; "models" is the Django/Flask community convention.
 - **The gunicorn command changes** from `gunicorn -w 4 -b 0.0.0.0:5000 app:app` to `gunicorn -w 4 -b 0.0.0.0:5000 "convictcode:create_app()"` (or equivalent). Update `connectors.md` and `SECURITY.md` accordingly.
 - **`test_connectors.py` needs more than a path rename.** The suite reads `app.py` directly to assert on its app-config section (`CSRFProtect(app)`, `SECRET_KEY` wiring) and its auth section (`generate_password_hash` / `check_password_hash` call sites), plus `database.py` for model shapes. Moving code into `convictcode/__init__.py`, `convictcode/routes/*.py`, `convictcode/forms.py`, and `convictcode/models.py` breaks every one of those `with open('app.py')` reads. The rename must happen in `connectors.md` **and** `tests/test_connectors.py` **and** the model/source paths it checks, all in the same PR as the layout change — otherwise the doc-consistency gate fails on the refactor commit.
+- **Templates/static paths.** Moving the app code into `convictcode/` moves `Flask(__name__)`'s root path into the package, and the default Jinja loader will stop finding the top-level `templates/`. Pick one explicitly in the same PR as the factory: either (a) **keep the dirs at the repo root** and construct the Flask app with `template_folder='../templates'` + `static_folder='../static'` (one-line change, no file moves), or (b) **move both dirs under `convictcode/`** so the defaults just work. Option (a) is less disruptive because the templates aren't renamed; option (b) is slightly cleaner for packaging. The target tree above shows option (a).
 - **`Bodeql.yml`** (deleted in this pass) does not appear in the target.
 - **`.vscode/`** stays as-is; useful for local devs and does not affect deploys.
 

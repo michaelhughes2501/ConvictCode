@@ -4,7 +4,7 @@
 
 ### B1 — Windows path separator in `.gitignore` (and the file is already tracked)
 - **File:** `.gitignore` (line 2)
-- **Symptom:** `.github\instructions\codacy.instructions.md` used `\` which Git treats as a literal on POSIX, so the entry was a no-op on Linux/macOS/CI. The POSIX-slash fix was applied in this pass — but `.github/instructions/codacy.instructions.md` is **already tracked in the index**, so the ignore pattern still has no effect on the file today. Gitignore rules only apply to *untracked* paths; a tracked file keeps appearing in `git status` regardless.
+- **Symptom:** `.github\instructions\codacy.instructions.md` used `\` which Git treats as a literal on POSIX, so the entry was a no-op on Linux/macOS/CI. The POSIX-slash fix was applied in this pass — but `.github/instructions/codacy.instructions.md` is **already tracked in the index**, so the ignore pattern still has no effect on the file today. Gitignore rules only apply to *untracked* paths; once a path is tracked, `.gitignore` cannot suppress its `git status` entries when the file is modified, and `git add -A` continues to pick up its edits.
 - **Fix:** POSIX slash **applied in this pass.** To actually stop tracking the Codacy instructions file, a follow-up PR must run `git rm --cached .github/instructions/codacy.instructions.md` and commit the removal. Not applied here — untracking is a deliberate policy decision about whether these instructions should live in the repo at all.
 
 ### B2 — `Bodeql.yml` is a broken duplicate workflow

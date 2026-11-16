@@ -22,7 +22,7 @@ ConvictCode is a Flask 2.3 web app (~400 LOC in `app.py`, ~120 LOC in `database.
 
 ## Safe fixes applied in this pass
 
-- **`.gitignore`** — replaced the Windows-typed `.github\instructions\codacy.instructions.md` rule (a no-op on POSIX / CI) with a POSIX path. **Note:** the file it points to is already tracked in git, so the ignore pattern has no effect on it today — a follow-up `git rm --cached` is needed if the Codacy instructions should actually stay out of the index. Left as a deliberate policy decision for a future PR (see [02-bug-hunt.md#b1](./02-bug-hunt.md)).
+- **`.gitignore`** — replaced the Windows-typed `.github\instructions\codacy.instructions.md` rule (a no-op on POSIX / CI) with a POSIX path. **Note:** the file it points to is already tracked in git, so the ignore pattern has no effect on it today — a follow-up `git rm --cached` is needed if the Codacy instructions should actually stay out of the index. Left as a deliberate policy decision for a future PR (see [02-bug-hunt.md#b1--windows-path-separator-in-gitignore-and-the-file-is-already-tracked](./02-bug-hunt.md)).
 - **`.github/workflows/Bodeql.yml`** — deleted. The file was a broken/duplicate copy of `codeql.yml`: same workflow name (so it clashed with the real one in the Actions UI), plus two malformed action stanzas (SecureStack + cloudposse) glued to the bottom that would have failed to parse if the workflow ever ran. `CLAUDE.md` had already flagged this as a known TODO ("The `Bodeql.yml` workflow is a typo of `CodeQL.yml` and likely redundant with `codeql.yml`").
 - **`CLAUDE.md`** — removed the now-resolved `Bodeql.yml` line from the "Known TODOs" list.
 

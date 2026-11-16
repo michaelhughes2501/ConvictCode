@@ -49,10 +49,17 @@ convictcode/
 ```python
 def create_app(config=None):
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    # No weak fallback for SECRET_KEY — the audit flags today's default-value
+    # fallback in app.py as L6 (app boots in prod with a public key). The
+    # target factory must fail fast when SECRET_KEY is missing, empty, or the
+    # known default; allow the boot only in a config dict (e.g. TESTING=True).
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
     if config:
         app.config.update(config)
+    secret = os.getenv('SECRET_KEY')
+    if (not secret or secret == 'dev-secret-key-change-in-production') and not app.config.get('TESTING'):
+        raise RuntimeError('SECRET_KEY must be set to a non-default value outside tests')
+    app.config['SECRET_KEY'] = secret or app.config.get('SECRET_KEY')  # pick up test-config override
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app)

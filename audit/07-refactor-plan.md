@@ -23,8 +23,14 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 
 ### A3. Boot-refuse on default `SECRET_KEY` outside dev
 - Effort: 15 min.
-- Code: at module load, mirror the normalisation `app.py:407` already uses — `if os.getenv('SECRET_KEY') is None and os.getenv('FLASK_DEBUG', '0').lower() not in ('1', 'true', 'yes', 'on'): raise RuntimeError(...)`. The `.lower()` matters because `FLASK_DEBUG=True` would otherwise bypass the check and the refuse-to-boot would fire even in debug mode.
-- Verification: existing tests still pass with `FLASK_DEBUG=1`; boot fails under `FLASK_DEBUG=0` without `SECRET_KEY`.
+- Code: at module load, **validate the resolved key**, not just `is None`. The guard must reject (a) unset, (b) empty string, and (c) the literal `'dev-secret-key-change-in-production'`. The dev-mode escape hatch must also use an explicit signal that cannot be set by an attacker who can influence process env under Gunicorn — prefer an explicit `APP_ENV=development` opt-in over `FLASK_DEBUG`, and mirror `app.py:407`'s `.lower()` + whitelist normalisation when parsing it. Sketch:
+  ```python
+  secret = os.getenv('SECRET_KEY', '')
+  is_dev = os.getenv('APP_ENV', 'production').lower() == 'development'
+  if (not secret or secret == 'dev-secret-key-change-in-production') and not is_dev:
+      raise RuntimeError('SECRET_KEY must be set to a non-default value outside APP_ENV=development')
+  ```
+- Verification: boot succeeds with any non-default `SECRET_KEY`; boot fails with an unset, empty, or literal-default `SECRET_KEY` when `APP_ENV` is not `development`.
 
 ### A4. Admin-gate `/api/analytics`
 - Effort: 30 min.
@@ -34,8 +40,9 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 ### A5. Add `Flask-Migrate` / Alembic
 - Effort: 1 hr.
 - Generate a baseline migration matching the current schema. Wire `flask db upgrade` into deploy docs.
-- **Must drop or guard `db.create_all()` in the app-startup block in the same PR:** if the baseline migration runs while `db.create_all()` still fires on import, the tables already exist when `flask db upgrade` tries to create them and the migration fails. Also plan how to handle any already-deployed SQLite/Postgres instance — `flask db stamp head` to mark the current schema as the baseline without running the migration against existing tables.
-- Verification: `flask db current` matches `flask db heads`; a fresh DB and an existing-DB path both work.
+- **Must drop or guard `db.create_all()` in the app-startup block in the same PR:** if the baseline migration runs while `db.create_all()` still fires on import, the tables already exist when `flask db upgrade` tries to create them and the migration fails.
+- **For an already-deployed SQLite or Postgres instance**, do not blindly run `flask db stamp head` — `stamp` only writes a row to `alembic_version`, it does not inspect, verify, or repair the live schema, so stamping a drifted DB silently hides missing tables or columns. The correct sequence: dump and diff the live schema against the baseline migration (`alembic revision --autogenerate` on a disposable copy will show the diff cleanly), reconcile any difference with hand-written migration steps, and `stamp head` only once the live DB is confirmed to match the baseline. Document this verify-then-stamp procedure in the deploy runbook.
+- Verification: `flask db current` matches `flask db heads`; a fresh DB and an existing-DB path both work; no schema drift is silently stamped over.
 
 ### A6. Add functional tests for the critical paths
 - Effort: 3 hrs.
