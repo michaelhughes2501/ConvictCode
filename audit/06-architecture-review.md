@@ -49,17 +49,24 @@ convictcode/
 ```python
 def create_app(config=None):
     app = Flask(__name__)
-    # No weak fallback for SECRET_KEY — the audit flags today's default-value
-    # fallback in app.py as L6 (app boots in prod with a public key). The
-    # target factory must fail fast when SECRET_KEY is missing, empty, or the
-    # known default; allow the boot only in a config dict (e.g. TESTING=True).
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
     if config:
-        app.config.update(config)
-    secret = os.getenv('SECRET_KEY')
-    if (not secret or secret == 'dev-secret-key-change-in-production') and not app.config.get('TESTING'):
+        app.config.update(config)  # test config lands here first, so it can carry SECRET_KEY
+
+    # Resolve SECRET_KEY with config taking precedence over env. The audit
+    # flags today's default-value fallback in app.py as L6 (app boots in
+    # production with a public key); the target factory must fail fast when
+    # SECRET_KEY is missing, empty, or the known default. The test escape
+    # applies only when TESTING is set in the config dict, and in that case
+    # the factory supplies a safe deterministic key so session-backed login
+    # and CSRF tests can actually run.
+    env_secret = os.getenv('SECRET_KEY')
+    is_bad = (not env_secret) or env_secret == 'dev-secret-key-change-in-production'
+    if is_bad and not app.config.get('SECRET_KEY') and not app.config.get('TESTING'):
         raise RuntimeError('SECRET_KEY must be set to a non-default value outside tests')
-    app.config['SECRET_KEY'] = secret or app.config.get('SECRET_KEY')  # pick up test-config override
+    if not app.config.get('SECRET_KEY'):
+        app.config['SECRET_KEY'] = env_secret or ('test-secret-key' if app.config.get('TESTING') else None)
+
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app)

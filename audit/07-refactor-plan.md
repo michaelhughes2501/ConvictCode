@@ -23,14 +23,17 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 
 ### A3. Boot-refuse on default `SECRET_KEY` outside dev
 - Effort: 15 min.
+- **Pre-factory scope.** This guard goes into `app.py` as a module-load check, which means the test suite and any `import app` from a script also hit it. Pick a test-escape route: either (a) tests must export a real `SECRET_KEY` (recommended — a single `conftest.py` fixture setting `os.environ['SECRET_KEY'] = 'test-secret-key'` before any `import app` covers it), or (b) treat `APP_ENV=test` the same as `APP_ENV=development` in the guard. Either way, state the test-env requirement in `connectors.md` so the A6 functional-test PR doesn't bounce off this guard on first import.
 - Code: at module load, **validate the resolved key**, not just `is None`. The guard must reject (a) unset, (b) empty string, and (c) the literal `'dev-secret-key-change-in-production'`. The dev-mode escape hatch must also use an explicit signal that cannot be set by an attacker who can influence process env under Gunicorn — prefer an explicit `APP_ENV=development` opt-in over `FLASK_DEBUG`, and mirror `app.py:407`'s `.lower()` + whitelist normalisation when parsing it. Sketch:
   ```python
   secret = os.getenv('SECRET_KEY', '')
-  is_dev = os.getenv('APP_ENV', 'production').lower() == 'development'
-  if (not secret or secret == 'dev-secret-key-change-in-production') and not is_dev:
-      raise RuntimeError('SECRET_KEY must be set to a non-default value outside APP_ENV=development')
+  app_env = os.getenv('APP_ENV', 'production').lower()
+  is_dev_or_test = app_env in ('development', 'test')
+  if (not secret or secret == 'dev-secret-key-change-in-production') and not is_dev_or_test:
+      raise RuntimeError('SECRET_KEY must be set to a non-default value outside APP_ENV={development,test}')
   ```
-- Verification: boot succeeds with any non-default `SECRET_KEY`; boot fails with an unset, empty, or literal-default `SECRET_KEY` when `APP_ENV` is not `development`.
+- **After C1 lands** (the app factory in [06-architecture-review.md](./06-architecture-review.md)), this check moves inside `create_app()` where a `TESTING=True` config flag replaces the `APP_ENV=test` escape, so this standalone module-load guard can be deleted in that PR.
+- Verification: boot succeeds with any non-default `SECRET_KEY`; boot fails with an unset, empty, or literal-default `SECRET_KEY` when `APP_ENV` is `production`; pytest runs green once the `conftest.py` fixture is in place (or the test runner exports `APP_ENV=test`).
 
 ### A4. Admin-gate `/api/analytics`
 - Effort: 30 min.
