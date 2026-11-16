@@ -20,12 +20,21 @@ For production, use a PostgreSQL or MySQL URL:
 DATABASE_URL=postgresql://user:password@host:5432/dbname
 ```
 
+For Neon specifically, use the `psycopg2` driver and require SSL:
+
+```
+DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>/<db>?sslmode=require
+```
+
 The connection is initialised in `app.py`:
 
 ```python
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 db.init_app(app)
 ```
+
+`pool_pre_ping` checks each pooled connection before use so a Neon compute that scaled to zero and closed the connection doesn't surface as a 500 on the next request.
 
 ### Models
 

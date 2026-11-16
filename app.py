@@ -15,6 +15,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Neon (and other serverless Postgres) can close idle pooled connections when
+# the compute scales to zero; pre-ping avoids a 500 on the first request after idle.
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 
 db.init_app(app)
 csrf = CSRFProtect(app)
