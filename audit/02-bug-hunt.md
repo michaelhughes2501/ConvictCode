@@ -2,20 +2,20 @@
 
 ## Confirmed bugs
 
-### B1 — Windows path separator in `.gitignore`
-- **File:** `.gitignore` (line 3)
-- **Symptom:** `.github\instructions\codacy.instructions.md` uses `\` which Git treats as a literal on POSIX. The file is not ignored on Linux/macOS/CI.
-- **Fix:** POSIX slash. **Fixed in this pass.**
+### B1 — Windows path separator in `.gitignore` (and the file is already tracked)
+- **File:** `.gitignore` (line 2)
+- **Symptom:** `.github\instructions\codacy.instructions.md` used `\` which Git treats as a literal on POSIX, so the entry was a no-op on Linux/macOS/CI. The POSIX-slash fix was applied in this pass — but `.github/instructions/codacy.instructions.md` is **already tracked in the index**, so the ignore pattern still has no effect on the file today. Gitignore rules only apply to *untracked* paths; a tracked file keeps appearing in `git status` regardless.
+- **Fix:** POSIX slash **applied in this pass.** To actually stop tracking the Codacy instructions file, a follow-up PR must run `git rm --cached .github/instructions/codacy.instructions.md` and commit the removal. Not applied here — untracking is a deliberate policy decision about whether these instructions should live in the repo at all.
 
 ### B2 — `Bodeql.yml` is a broken duplicate workflow
 - **File:** `.github/workflows/Bodeql.yml`
-- **Symptom:** File declares `name: "CodeQL Advanced"` — identical to the real `codeql.yml` — which causes both to appear in the Actions UI under the same name. Worse, lines 106–131 of `Bodeql.yml` glue two extra action stanzas (`SecureStackCo/actions-all-in-one@v0.1.2` and `cloudposse/github-action-auto-format@v0.12.0`) onto the last step in a way that is not valid YAML for a workflow (they are indented as sub-keys of the `Perform CodeQL Analysis` step). CodeQL happens to still start because the file registers the earlier valid jobs; the tail is silently ignored. But any attempt to touch the file will hit a parser error.
+- **Symptom:** File declares `name: "CodeQL Advanced"` — identical to the real `codeql.yml` — so both appeared in the Actions UI under the same name. Lines 106–131 glued two extra action stanzas (`SecureStackCo/actions-all-in-one@v0.1.2` and `cloudposse/github-action-auto-format@v0.12.0`) onto the last step with indentation that is not valid workflow YAML. GitHub rejects the whole file as a parse failure before scheduling any job from it, so none of its CodeQL steps actually ran — the duplicate name was the only visible symptom, and CodeQL coverage came entirely from the real `codeql.yml`.
 - **Fix:** Delete. `codeql.yml` covers the same three languages (`actions`, `javascript-typescript`, `python`). **Fixed in this pass.**
 
 ### B3 — `User.password_hash` is `VARCHAR(128)` — too short for scrypt
 - **File:** `database.py:14`
-- **Symptom:** `password_hash = db.Column(db.String(128), nullable=False)`. Werkzeug's default hasher on 2024+ releases is scrypt, which produces hashes of ~135–170 chars. SQLite ignores the length limit; **PostgreSQL and MySQL enforce it**. On those databases, `set_password` inserts a truncated hash, `check_password_hash` compares the truncated stored value against a full-length hash and returns False, and every login fails.
-- **Fix:** Change to `db.String(255)` or `db.Text`. Requires a migration on live databases (no migration tool wired here; `db.create_all()` won't alter existing tables). **Not applied in this pass** — a column-width change to a hashed-password column is a schema change that needs a migration, not an ad-hoc code edit. Called out prominently in [07-refactor-plan.md](./07-refactor-plan.md).
+- **Symptom:** `password_hash = db.Column(db.String(128), nullable=False)`. Werkzeug's default hasher on 2024+ releases is scrypt, which produces hashes of ~135–170 chars. SQLite ignores the length limit so dev is fine. On **PostgreSQL** the over-length value raises `psycopg2.errors.StringDataRightTruncation` (`DataError`) at insert time, so `/register` fails outright and no account is created — the current column already breaks registration on Postgres today. On **MySQL** the behaviour depends on `sql_mode`: strict mode errors on insert (same failure as Postgres), non-strict mode silently truncates and then every `check_password_hash` call returns False against the full-length hash on login. Either way, moving the database from SQLite surfaces the bug.
+- **Fix:** Change to `db.String(255)` or `db.Text`. Requires a migration on live databases (no migration tool wired here; `db.create_all()` won't alter existing columns). **Not applied in this pass** — a column-width change to a hashed-password column is a schema change that needs a migration, not an ad-hoc code edit. Called out prominently in [07-refactor-plan.md](./07-refactor-plan.md).
 
 ### B4 — `view_post` increments views without auth, rate-limit, or atomic UPDATE
 - **File:** `app.py:260–266`
@@ -29,8 +29,8 @@
 
 ### B6 — `Match.is_mutual == True` filter uses `== True` instead of `.is_(True)`
 - **File:** `app.py:144, 284`; `analytics` at line 372.
-- **Symptom:** Works today because SQLAlchemy generates `is_mutual = 1` for SQLite. On stricter dialects and with `flake8-sqlalchemy`, `== True` is flagged as an anti-pattern. Also breaks if `is_mutual` becomes tri-state (True / False / NULL).
-- **Fix:** `Match.is_mutual.is_(True)`. Not applied — behavioural equivalence on current SQLite; cosmetic.
+- **Symptom:** Stylistic only — `== True` is flagged by `flake8-sqlalchemy` as an anti-pattern. SQLAlchemy emits a valid boolean predicate on both SQLite and Postgres, and `== True` and `.is_(True)` both exclude NULL rows the same way. No cross-dialect or tri-state correctness difference; pure style.
+- **Fix:** `Match.is_mutual.is_(True)` if adopting the linter. Not applied — stylistic, no behavioural difference.
 
 ## Latent bugs
 
@@ -46,18 +46,18 @@
 
 ### L3 — `messages` route builds conversation list per user in an N+1 loop
 - **File:** `app.py:206–214`
-- **Symptom:** For each unique `uid`, it issues two queries: `User.query.get(uid)` and a filtered `Message.query`. With 50 conversations that's 100 queries per page render.
+- **Symptom:** For each unique `uid`, it issues three queries: `User.query.get(uid)`, the last-message `Message.query` (ordered by `created_at desc` + `first()`), and the unread `Message.query.filter(...).count()`. With 50 conversations that's 150 queries per page render.
 - **Fix:** Batch load users with `User.query.filter(User.id.in_(user_ids))`, and derive last-message + unread-count in a single grouped query. Not applied — perf smell, not a correctness bug.
 
-### L4 — `login` writes `user.last_login = datetime.utcnow()` after `login_user()`
+### L4 — `login` can set Flask's session cookie before the DB commit succeeds
 - **File:** `app.py:130–132`
-- **Symptom:** `login_user(user)` commits its own session bookkeeping; then this code sets `last_login` and commits. If the second commit fails, the user is logged in but `last_login` is stale. Recovery is trivial (next login fixes it), so this is a soft bug.
-- **Fix:** Set `last_login` *before* `login_user`, in the same session, and commit once. Not applied.
+- **Symptom:** The route calls `login_user(user)` (which writes authentication state into Flask's signed session) *before* setting `user.last_login` and calling `db.session.commit()`. There is only one commit — the earlier "two commits" framing in draft notes was wrong; `login_user()` does not touch the DB session. The soft bug: if that single commit raises, the user has already been marked authenticated in the Flask session and the error response can still carry a Set-Cookie with the authenticated session, while `last_login` was never persisted.
+- **Fix:** Move the `last_login` write and `db.session.commit()` **before** `login_user(user)`, so a DB failure aborts the login attempt rather than leaving authenticated session state attached to the error response. Not applied — small behavioural change worth doing alongside the login hardening in the refactor plan.
 
 ### L5 — `chat` swallows all exceptions silently
 - **File:** `app.py:355–360`
 - **Symptom:** `except Exception:` masks bad API keys, rate limit hits, model name typos, and quota-exceeded errors — the user always sees the canned "I'm here to help!" reply. Debugging the outage requires SSHing into the box and reading logs (which don't include the exception either).
-- **Fix:** `except anthropic.APIError as e: app.logger.exception('anthropic chat failure')` — narrower except type + logging.
+- **Fix:** Guard the missing-key case first (`if not os.getenv('ANTHROPIC_API_KEY'): return canned_fallback`), then build the client, then catch `anthropic.APIError` narrowly with `app.logger.exception('anthropic chat failure')`. If the except is narrowed to `APIError` without the missing-key guard, `anthropic.Anthropic(api_key=None)` raises outside that handler and `/api/chat` returns a 500 instead of the fallback — the current broad except accidentally covers this today. Not applied.
 
 ### L6 — `SECRET_KEY` default lets the app start in production with `dev-secret-key-change-in-production`
 - **File:** `app.py:15`
@@ -74,6 +74,11 @@
 - **`view_profile` at line 166** — exposes `crime_type`, `release_date`, `rehabilitation_status` to any authenticated user. This is *intentional* for a dating app and matches the design in `templates/view_profile.html`. Flagged in [04-security-review.md](./04-security-review.md) as a privacy consideration, not a bug.
 - **CSRF exemption on `/api/chat`** — correct per `connectors.md`; the route requires `@login_required` and is JSON-only. Adding a strict Origin header check would be defence-in-depth, not a bug fix.
 
-## Nothing else surfaced from a static read
+### L8 — `like_user` and `add_comment` don't verify the target exists
+- **Files:** `app.py` (like route around line 183; comment route around line 275).
+- **Symptom:** `like_user(user_id)` creates a `Like` row and possibly a `Match` without a `User.query.get_or_404(user_id)` check — a crafted POST to `/like/<nonexistent-id>` writes an orphan `Like` whose `liked_user_id` FK points at nothing. `add_comment(post_id)` has the same shape for `ForumComment`. On SQLite FK enforcement is off by default so the orphan rows persist; on Postgres with FKs enforced, the insert errors and 500s.
+- **Fix:** `User.query.get_or_404(user_id)` / `ForumPost.query.get_or_404(post_id)` at the top of each handler, before writing. Not applied.
+
+## Not surfaced here but worth a note
 
 Route logic is largely straightforward CRUD. No obvious IDOR (routes filter by `current_user.id` or use `.get_or_404`). No obvious SSRF (no outbound HTTP to user-controlled URLs). Template auto-escape is respected; no `|safe` on user data. If functional tests existed, this file could be shorter — the lack of them is why the L-tier bugs are all suspicions rather than reproductions.

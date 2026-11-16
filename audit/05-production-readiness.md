@@ -7,7 +7,7 @@
 | 1 | Reproducible install | Partial — `requirements.txt` has upper caps; no lockfile (`pip-tools` / `uv` / `pip-compile` output). |
 | 2 | Env config documented + enforced | Docs OK (`.env.example`, `connectors.md`). No boot-time enforcement. |
 | 3 | Dependencies audited | No `pip-audit` / Dependabot for `pip`. |
-| 4 | Minimum test bar | 5 doc-consistency test modules. **Zero functional route tests.** |
+| 4 | Minimum test bar | 1 doc-consistency test module (`tests/test_connectors.py`, ~90 tests). **Zero functional route tests.** |
 | 5 | CI enforcing tests | CodeQL runs but does not run tests. No `pytest` job. |
 | 6 | Observability | None — no structured logging, no APM, no error reporter. |
 | 7 | Rate limiting | None. |
@@ -28,7 +28,7 @@
 - **A `.dockerignore`.** Otherwise `venv/`, `instance/`, and `__pycache__/` bloat the image.
 - **A `Procfile` (Heroku/Render/Fly)** OR a `render.yaml` OR a `fly.toml`. Pick a target and commit the config.
 - **A managed database.** SQLite is fine for dev; the `instance/felon_dating.db` file is not survivable across restarts on ephemeral hosts (Fly, Heroku dynos, most Kubernetes pods). Provision Postgres (Supabase, Neon, RDS) and set `DATABASE_URL`.
-- **A migration story.** Once Postgres is in play, `db.create_all()` will not alter columns — even something as basic as widening `password_hash` (see [02-bug-hunt.md#b3](./02-bug-hunt.md)) requires Alembic. Add `Flask-Migrate`.
+- **A migration story.** Once Postgres is in play, `db.create_all()` will not alter columns — even something as basic as widening `password_hash` (see [02-bug-hunt.md#b3--userpassword_hash-is-varchar128--too-short-for-scrypt](./02-bug-hunt.md)) requires Alembic. Add `Flask-Migrate`.
 
 ## Observability
 
@@ -43,13 +43,13 @@ Nothing exists today. Minimum viable stack for a Flask app:
 
 - **Backup** — nothing. On a managed Postgres, provider snapshots are the baseline. Document the retention and restore procedure.
 - **Restore** — see above; needs a documented test-restore cadence.
-- **Data deletion** — `User.query.get(uid).delete()` cascades to `ForumComment` (via `cascade='all, delete-orphan'` on `ForumPost.comments`) but does NOT cascade to `Message`, `Like`, `Match`, or `ForumPost`. A deleted user leaves orphan records with a dangling `user_id` foreign key. GDPR-wise, "delete my account" is not a solved problem here.
+- **Data deletion** — no account-deletion path exists in `app.py` at all. The schema's only configured cascade is `ForumPost → ForumComment` (`cascade='all, delete-orphan'` on `ForumPost.comments`); `User` has no `cascade=` clauses on its `Message`, `Like`, `Match`, or `ForumPost` relationships. So even if a maintainer wrote `db.session.delete(user); db.session.commit()` today, on SQLite (FKs off by default) it would orphan rows across four tables, and on Postgres with FKs enforced it would 500 with `IntegrityError` rather than cascade. GDPR-wise, "delete my account" needs an explicit endpoint that walks the related rows (or adds `cascade='all, delete-orphan'` to each `User` relationship in a migration) before it can be built.
 - **PII inventory** — not documented. Needed for any privacy policy.
 
 ## Reliability
 
 - **No graceful shutdown.** Gunicorn handles SIGTERM but the app's `chat` handler makes an outbound HTTP call to Anthropic that can hang for tens of seconds; a naive SIGTERM will interrupt in-flight requests.
-- **No timeout on the Anthropic call.** `client.messages.create(...)` uses SDK defaults (~60s). During an Anthropic incident, every chat request pins a worker for the full timeout, exhausting the four gunicorn workers under trivial load.
+- **No explicit timeout on the Anthropic call.** `client.messages.create(...)` relies on SDK defaults — the Anthropic Python SDK's default request timeout is ~10 minutes, not seconds. During an Anthropic incident, every chat request can pin a gunicorn worker for the full default, exhausting the four workers under trivial load long before the SDK gives up. Fix by passing an explicit `timeout=` to `anthropic.Anthropic(...)` (or per-call `with_options(timeout=...)`), e.g. 20–30 seconds.
 - **No circuit breaker.** If Anthropic is degraded, the app keeps trying every request. Cheap fix: `circuitbreaker` PyPI package.
 
 ## Documentation

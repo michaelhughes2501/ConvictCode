@@ -9,7 +9,7 @@
 - **`login_required`** on every non-public route in the app.
 
 ### Gaps
-- **`password_hash` column is `VARCHAR(128)`** (see [02-bug-hunt.md#b3](./02-bug-hunt.md)). Scrypt hashes exceed 128 chars; on PostgreSQL / MySQL logins would silently fail. **Sev: high on non-SQLite backends.**
+- **`password_hash` column is `VARCHAR(128)`** (see [02-bug-hunt.md#b3--userpassword_hash-is-varchar128--too-short-for-scrypt](./02-bug-hunt.md)). Scrypt hashes exceed 128 chars; on **PostgreSQL** the over-length insert raises `DataError` and registration fails outright. On **MySQL** the behaviour depends on `sql_mode` — strict mode errors on insert, non-strict silently truncates and later `check_password_hash` returns False on login. **Sev: high on non-SQLite backends.**
 - **No account lockout / brute-force protection.** Login is unrate-limited; a script can guess passwords indefinitely. `Flask-Limiter` is not installed.
 - **No email verification flow.** `User.is_verified = Boolean(default=False)` exists in the schema but nothing sets it; anyone can register and immediately act.
 - **No password strength requirement** beyond `Length(min=6)`. Six characters is well below any 2020s baseline; recommend `Length(min=10)` plus a common-password blacklist (`have-i-been-pwned`-style check, or a static top-10k blacklist).
@@ -48,11 +48,11 @@
 ## Transport & headers
 
 - **No HSTS.** Anyone MITM'ing a downgraded HTTP hop can strip auth.
-- **No CSP.** With `base.html` loading Bootstrap and Font Awesome from jsdelivr and cdnjs, plus its own inline `<script>` for the theme flash-of-unstyled-content fix, a strict CSP needs `script-src 'self' 'unsafe-inline'` (or, better, replace the inline script with a hashed one). Recommendation: `Flask-Talisman` with:
+- **No CSP.** `base.html` loads Bootstrap + Font Awesome from jsdelivr/cdnjs and uses inline `<script>` for the theme flash-of-unstyled-content fix. Several templates also use inline `style=` attributes (e.g. the dashboard progress-bar width), so a strict CSP without `'unsafe-inline'` on `style-src` will block them and strip page styling. Recommendation: `Flask-Talisman` with — and plan to move the inline styles into CSS classes as a follow-up so `'unsafe-inline'` can be dropped from `style-src`:
   ```python
   csp = {
       'default-src': "'self'",
-      'style-src':   ["'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'],
+      'style-src':   ["'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com', "'unsafe-inline'"],
       'script-src':  ["'self'", 'cdn.jsdelivr.net', "'unsafe-inline'"],  # or use SRI + hash
       'font-src':    ["'self'", 'cdnjs.cloudflare.com', 'data:'],
       'img-src':     ["'self'", 'data:'],
@@ -82,7 +82,7 @@
 
 ## Summary
 
-Zero exploitable issues in the code today *if* the DB is SQLite and no one guesses the login password. Real production launch needs, in priority order:
+Two findings above are exploitable today as the app ships: the unrate-limited `/api/chat` is a cost-drain vector for any authenticated user, and `/api/analytics` leaks aggregate growth metrics to every registered user. Everything else is latent, or depends on moving off SQLite. Real production launch needs, in priority order:
 
 1. Widen `password_hash` column (B3) — without this, PG/MySQL migration breaks login.
 2. Rate-limit `/login`, `/register`, `/api/chat`.

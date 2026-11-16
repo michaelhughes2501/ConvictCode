@@ -23,7 +23,7 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 
 ### A3. Boot-refuse on default `SECRET_KEY` outside dev
 - Effort: 15 min.
-- Code: at module load, `if os.getenv('SECRET_KEY') is None and os.getenv('FLASK_DEBUG','0') not in ('1','true','yes','on'): raise RuntimeError(...)`.
+- Code: at module load, mirror the normalisation `app.py:407` already uses — `if os.getenv('SECRET_KEY') is None and os.getenv('FLASK_DEBUG', '0').lower() not in ('1', 'true', 'yes', 'on'): raise RuntimeError(...)`. The `.lower()` matters because `FLASK_DEBUG=True` would otherwise bypass the check and the refuse-to-boot would fire even in debug mode.
 - Verification: existing tests still pass with `FLASK_DEBUG=1`; boot fails under `FLASK_DEBUG=0` without `SECRET_KEY`.
 
 ### A4. Admin-gate `/api/analytics`
@@ -34,7 +34,8 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 ### A5. Add `Flask-Migrate` / Alembic
 - Effort: 1 hr.
 - Generate a baseline migration matching the current schema. Wire `flask db upgrade` into deploy docs.
-- Verification: `flask db current` matches `flask db heads`.
+- **Must drop or guard `db.create_all()` in the app-startup block in the same PR:** if the baseline migration runs while `db.create_all()` still fires on import, the tables already exist when `flask db upgrade` tries to create them and the migration fails. Also plan how to handle any already-deployed SQLite/Postgres instance — `flask db stamp head` to mark the current schema as the baseline without running the migration against existing tables.
+- Verification: `flask db current` matches `flask db heads`; a fresh DB and an existing-DB path both work.
 
 ### A6. Add functional tests for the critical paths
 - Effort: 3 hrs.
@@ -43,8 +44,8 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 
 ### A7. Add CI job for `pytest`
 - Effort: 20 min.
-- New `.github/workflows/tests.yml`: matrix of Python 3.11 + 3.12 + 3.13; `pip install -r requirements.txt`, `python -m pytest`.
-- Verification: green on the PR.
+- New `.github/workflows/tests.yml`: matrix of Python 3.11 + 3.12 + 3.13. `requirements.txt` does **not** include `pytest`, so the job must either install it explicitly (`pip install -r requirements.txt pytest`) or — preferred — introduce a `requirements-dev.txt` with `pytest` + future dev-only deps and `pip install -r requirements.txt -r requirements-dev.txt`.
+- Verification: green on the PR; the suite actually runs rather than exiting with `No module named pytest`.
 
 ## Phase B — Hardening
 
@@ -63,7 +64,7 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 - Effort: 15 min. Add a `CommentForm(FlaskForm)` with `TextAreaField(Length(max=2000))` and switch the route to use it.
 
 ### B4. Cap `/api/chat` input length + narrow the exception + log failures
-- Effort: 30 min. `except anthropic.APIError as e: app.logger.exception(...)`.
+- Effort: 30 min. Guard the missing-key case **before** constructing the client (`if not os.getenv('ANTHROPIC_API_KEY'): return canned_fallback`), then `except anthropic.APIError as e: app.logger.exception(...)`. Narrowing the except without the missing-key guard regresses today's accidental coverage, because `anthropic.Anthropic(api_key=None)` raises outside `APIError` and `/api/chat` 500s instead of returning the canned fallback.
 
 ### B5. Atomic `views` increment on forum posts
 - Effort: 15 min. `.update({'views': ForumPost.views + 1})`.
@@ -76,9 +77,9 @@ Ordered, sized, dependency-aware. Each step is a landable PR of its own.
 
 ### C1. Modest source split (see [06-architecture-review.md](./06-architecture-review.md))
 - Extract `forms.py`, `resources_data.py`, `prompts.py`.
-- Convert `app.py` to an app factory.
+- Convert `app.py` to an app factory that accepts a config dict (see [06-architecture-review.md](./06-architecture-review.md)).
 - Effort: 2 hrs.
-- Verification: `test_connectors.py` still passes (it inspects source text, so the imports must remain resolvable).
+- Verification: `test_connectors.py` still passes. **This is the fragile bit:** the test suite pins exact source-text fragments from `app.py` and `database.py` (e.g. the `CSRFProtect(app)` wiring in the app-config section and the `check_password_hash` call in the auth section). Moving code into `forms.py` / `routes.py` will fail those assertions unless `connectors.md` is updated to point at the new modules and `tests/test_connectors.py` is updated in lockstep. Name the specific pinned fragments in the PR description so the review catches drift.
 
 ### C2. Wire Sentry
 - Effort: 30 min. `sentry-sdk[flask]`, DSN from env, one-line init.

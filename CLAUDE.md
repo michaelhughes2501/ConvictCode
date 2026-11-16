@@ -11,7 +11,7 @@ Guidance for Claude Code (and humans) when working in this repository.
 - **Language**: Python 3
 - **Framework**: Flask 2.3+
 - **ORM**: Flask-SQLAlchemy 3.1+ (SQLite for dev, PostgreSQL/MySQL ready via `DATABASE_URL`)
-- **Auth**: Flask-Login (sessions) + `werkzeug.security` password hashes (bcrypt-backed)
+- **Auth**: Flask-Login (sessions) + `werkzeug.security` password hashes (scrypt by default on modern Werkzeug; `pbkdf2` as the other supported method — `bcrypt` is listed in `requirements.txt` but is not used anywhere in the code)
 - **Forms / CSRF**: Flask-WTF + WTForms 3
 - **AI**: `anthropic` Python SDK (Claude Haiku for the support chatbot)
 - **Server**: Gunicorn (production)
@@ -108,7 +108,7 @@ All models in `database.py` (SQLAlchemy declarative). Tables are auto-created on
 
 ## CI/CD
 
-`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions), a duplicate `Bodeql.yml` workflow (likely a typo of CodeQL — see TODO below), and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
+`.github/workflows/` runs CodeQL (Python + JavaScript/TypeScript + Actions) and Microsoft Defender for DevOps on push/PR to `main` and on a weekly schedule.
 
 ## Known TODOs
 

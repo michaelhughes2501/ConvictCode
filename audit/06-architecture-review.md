@@ -14,7 +14,7 @@ Flask app (single module, app.py)
    ├── LoginManager(app)
    ├── SQLAlchemy(app) → SQLite (instance/felon_dating.db)
    │
-   ├── ~15 route handlers (auth, profile, matching, messaging, forum, resources, analytics, chat)
+   ├── 20 route handlers (auth, profile, matching, messaging, forum, resources, analytics, chat)
    ├── 5 WTForms classes inline
    └── 1 static RESOURCES list (18 hardcoded entries)
 ```
@@ -44,12 +44,15 @@ convictcode/
 └── prompts.py           ← chat system prompt(s)
 ```
 
-`app.py` becomes:
+`app.py` becomes (sketch — `template_folder`/`static_folder` keep working with the current repo layout where `templates/` and `static/` live beside this module; if the refactor moves code into a `convictcode/` package, point those explicitly at the repo root):
 
 ```python
-def create_app():
+def create_app(config=None):
     app = Flask(__name__)
-    app.config.from_prefixed_env('FLASK')  # or explicit load
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
+    if config:
+        app.config.update(config)
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app)
@@ -59,7 +62,7 @@ def create_app():
 ```
 
 Benefits, in order:
-- **Testable factory.** Functional tests instantiate `create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})` per test.
+- **Testable factory.** Functional tests instantiate `create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})` per test. The factory must accept the config dict for that to work — hence the `config=None` argument above.
 - **Focused files.** Each file changes for one reason.
 - **Zero blueprint overhead.** Blueprints are a fine next step (if / when the app doubles in size); they are not required right now.
 

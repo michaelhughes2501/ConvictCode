@@ -29,12 +29,12 @@ All pins use range specifiers with an upper cap on the major version — good hy
 | `Flask-WTF` | `>=1.2.1,<2` | Current stable. Fine. |
 | `WTForms` | `>=3.1.2,<4` | Current stable. Fine. |
 | `python-dotenv` | `>=1.0.1,<2` | Fine. |
-| `bcrypt` | `>=4.1.3,<5` | **Unused.** The code uses `werkzeug.security.generate_password_hash`, whose default hasher is scrypt (not bcrypt) on recent Werkzeug. `bcrypt` sits in `requirements.txt` doing nothing. Either wire `werkzeug` to use bcrypt explicitly (`generate_password_hash(pw, method='bcrypt')`) — which does not exist as a Werkzeug method name; the actual method name is `bcrypt` via `passlib`, not Werkzeug — or drop it. Recommendation: drop it. |
+| `bcrypt` | `>=4.1.3,<5` | **Unused.** The code uses `werkzeug.security.generate_password_hash`, whose supported methods are `pbkdf2` and `scrypt` only — Werkzeug does not use the `bcrypt` package at all (bcrypt support would require a different library such as `flask-bcrypt` or `passlib`). The `bcrypt` wheel sits in `requirements.txt` with no import site anywhere in the code. Recommendation: drop it. |
 | `Pillow` | `>=12.2.0,<13` | Pinned for Python image handling but the app currently does not process or resize uploaded images (`profile_pic` is a filename string only). Unused. Safe to drop unless upload-and-resize is planned. |
 | `email-validator` | `>=2.2.0,<3` | Required by WTForms `Email()` validator. Correct. |
 | `SQLAlchemy` | `>=2.0.30,<3` | Pinned separately from Flask-SQLAlchemy; harmless (Flask-SQLAlchemy 3.1+ already depends on SA 2). Fine. |
 | `gunicorn` | `>=22.0.0,<23` | Current stable. Fine. |
-| `anthropic` | `>=0.40.0,<1` | 0.40 is stable, but the SDK has moved forward significantly. The 0.x line has had regular breaking-change minor bumps historically — the `<1` cap is prudent. **Compatibility caveat:** the code uses `client.messages.create` with `model='claude-haiku-4-5-20251001'`. That model ID is real and correct today; if you bump the SDK, verify `response.content[0].text` still works (there was a period where the SDK returned a `TextBlock` object rather than a plain-attr `.text`, but as of 0.40+ this is stable). |
+| `anthropic` | `>=0.40.0,<1` | 0.40 is stable, but the SDK has moved forward significantly. The 0.x line has had regular breaking-change minor bumps historically — the `<1` cap is prudent. **Compatibility caveat:** the code uses `client.messages.create` with `model='claude-haiku-4-5-20251001'` and reads `response.content[0].text`. Verify the response shape still matches when bumping the SDK — `response.content` is a list of content blocks (`TextBlock` among them), and the `.text` attribute is the long-standing accessor on that block. |
 
 ## Unused / suspect
 

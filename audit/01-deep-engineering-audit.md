@@ -7,12 +7,12 @@
 | Language | Python 3 (no `python_requires` pinned) |
 | Framework | Flask 2.3+ |
 | Total Python LOC | ~400 (`app.py`) + ~120 (`database.py`) + ~650 (`tests/`) |
-| Templates | 12 Jinja2 templates, all extending `base.html` |
+| Templates | 15 Jinja2 templates, all extending `base.html` |
 | DB | SQLite dev default, `DATABASE_URL` swappable to Postgres/MySQL |
 | Auth | Flask-Login + `werkzeug.security` (PBKDF2/scrypt) |
 | CSRF | Flask-WTF, globally initialised, one documented exempt (`/api/chat`) |
 | AI | `anthropic` SDK, Claude Haiku for the support chatbot |
-| Tests | 5 modules × ~40 tests, all validating that `connectors.md` matches source. **Zero functional route tests.** |
+| Tests | 1 doc-consistency module (`tests/test_connectors.py`, ~90 tests), all validating that `connectors.md` matches source. **Zero functional route tests.** |
 | Lint / formatter | None. |
 | CI | CodeQL (Advanced, three-language matrix) + Defender for DevOps + a broken duplicate CodeQL workflow (`Bodeql.yml`, deleted in this pass). |
 | Docs | `CLAUDE.md` (AI context), `SECURITY.md`, `connectors.md`. All present, all accurate as of this pass. |
@@ -32,13 +32,13 @@
 Every model in `database.py` uses `default=datetime.utcnow`, and `app.py` uses `datetime.utcnow()` in `login` (line 131) and `analytics` (line 366). On Python 3.12+, calling `datetime.utcnow()` emits a `DeprecationWarning`; on Python 3.15+ it's slated for removal. The compat migration is `datetime.now(timezone.utc)` (or `datetime.UTC` on 3.11+). The `current_year` context processor at line 397 was already migrated; the rest was left.
 
 ### G2 — `User.password_hash` is `VARCHAR(128)` — too narrow for scrypt
-`werkzeug.security.generate_password_hash` defaults to scrypt in modern versions, and scrypt hashes can exceed 128 characters (typically ~135–170). On SQLite the column length is advisory, but on **PostgreSQL and MySQL** a hash longer than 128 chars will be **silently truncated on insert and refuse to verify on login**. This is a config-only environment away from a production login outage. Recommend `db.String(255)` or `db.Text`.
+`werkzeug.security.generate_password_hash` defaults to scrypt in modern versions, and scrypt hashes can exceed 128 characters (typically ~135–170). On SQLite the column length is advisory, so dev works fine. On **PostgreSQL**, an over-length value raises `DataError` on insert, so **registration fails outright** — the current column already breaks `/register` on Postgres today. On **MySQL** the behaviour depends on `sql_mode`: strict mode errors on insert, non-strict silently truncates and then the next login fails to verify. Either way, a config-only environment change surfaces the bug. Recommend `db.String(255)` or `db.Text`.
 
 ### G3 — No functional tests
 `tests/test_connectors.py` verifies docs against code. It does not exercise a single route. There is no test for register/login, no test for the mutual-like → match flow, no test for CSRF, no test for the chatbot's fallback path. First feature-affecting bug that lands will not be caught in CI.
 
 ### G4 — `lint` script is missing entirely
-There is no `ruff`, no `flake8`, no `black`, no `mypy`. The `SECURITY.md` claim of "we run static analysis" is CodeQL + Defender only — those are security scanners, not lint. Recommend `ruff` + `ruff format` as the minimum.
+There is no `ruff`, no `flake8`, no `black`, no `mypy`. The repo's static analysis is CodeQL + Defender for DevOps — security scanners, not lint. Recommend `ruff` + `ruff format` as the minimum.
 
 ### G5 — `analytics` route is `@login_required` but not admin-gated
 Any authenticated user can `GET /api/analytics` and see total user counts, message counts, forum post counts, and rolling weekly deltas. This is aggregate data — not PII — but it's a leak that reveals platform size and growth to competitors and to anyone who registers.
@@ -78,9 +78,8 @@ In `chat()`, `anthropic.Anthropic(api_key=...)` runs on every call. The client k
 | 2 | Static `RESOURCES` list mixed with route handlers | `app.py:76–95` |
 | 3 | Long inline `Match.query.filter(...)` predicates | `app.py:142, 170, 282` |
 | 4 | `IntegerField('Age', validators=[NumberRange(min=18, max=120)])` but no DB constraint | `app.py:48` |
-| 5 | `first_name` + `last_name` joined without null-guarding both | `database.py:55` (harmless — falsy short-circuits) |
-| 6 | Manual `read/update/commit` on messages instead of `.update(synchronize_session=False)` | `app.py:223` |
-| 7 | `search` route iterates `.contains()` — leaks LIKE metacharacters | `app.py:302–311` |
+| 5 | Manual `read/update/commit` on messages instead of `.update(synchronize_session=False)` | `app.py:223` |
+| 6 | `search` route iterates `.contains()` — leaks LIKE metacharacters | `app.py:302–311` |
 
 ## Verdict
 

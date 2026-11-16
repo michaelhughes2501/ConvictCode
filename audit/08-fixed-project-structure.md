@@ -1,6 +1,6 @@
 # 08 — Fixed Project Structure
 
-Target layout after Phases A–D of [07-refactor-plan.md](./07-refactor-plan.md) land. Nothing that exists today is deleted — every current file has a home in this tree.
+Target layout after Phases A–D of [07-refactor-plan.md](./07-refactor-plan.md) land. Every current *source* file has a home in this tree; the one deletion is `.github/workflows/Bodeql.yml` (removed in the Phase-1 pass as a broken duplicate of `codeql.yml`), which simply does not appear below.
 
 ```
 ConvictCode/
@@ -53,7 +53,7 @@ ConvictCode/
 │   ├── css/style.css                  ← existing
 │   └── js/main.js                     ← existing
 │
-├── templates/                         ← existing 12 templates
+├── templates/                         ← existing 15 templates
 │   ├── base.html                      ← add SRI hashes to CDN links (Phase B2)
 │   ├── dashboard.html
 │   ├── forum.html
@@ -61,6 +61,12 @@ ConvictCode/
 │   └── admin/                         ← new (Phase A4)
 │       ├── analytics.html
 │       └── users.html
+│   ↑ Flask's default template loader resolves paths relative to the app's root path.
+│     Moving code into the `convictcode/` package below moves that root path into the
+│     package dir, so this top-level `templates/` stops being discovered automatically.
+│     Either move `templates/` and `static/` under `convictcode/`, or pass
+│     `Flask(__name__, template_folder='../templates', static_folder='../static')`
+│     when the factory runs. See the call-out below.
 │
 ├── instance/                          ← existing; still gitignored; still holds SQLite dev DB
 │
@@ -98,16 +104,14 @@ ConvictCode/
 - **`app.py` disappears** as a top-level file. Its contents move to `convictcode/__init__.py` (factory), `convictcode/routes/*.py` (handlers), `convictcode/forms.py`, and `convictcode/resources_data.py`.
 - **`database.py` moves to `convictcode/models.py`.** The rename is deliberate — "database.py" was a file-purpose label; "models" is the Django/Flask community convention.
 - **The gunicorn command changes** from `gunicorn -w 4 -b 0.0.0.0:5000 app:app` to `gunicorn -w 4 -b 0.0.0.0:5000 "convictcode:create_app()"` (or equivalent). Update `connectors.md` and `SECURITY.md` accordingly.
-- **`test_connectors.py` needs a small update** to look for `convictcode/models.py` instead of `database.py`. This is a mechanical PR-2 step.
+- **`test_connectors.py` needs more than a path rename.** The suite reads `app.py` directly to assert on its app-config section (`CSRFProtect(app)`, `SECRET_KEY` wiring) and its auth section (`generate_password_hash` / `check_password_hash` call sites), plus `database.py` for model shapes. Moving code into `convictcode/__init__.py`, `convictcode/routes/*.py`, `convictcode/forms.py`, and `convictcode/models.py` breaks every one of those `with open('app.py')` reads. The rename must happen in `connectors.md` **and** `tests/test_connectors.py` **and** the model/source paths it checks, all in the same PR as the layout change — otherwise the doc-consistency gate fails on the refactor commit.
 - **`Bodeql.yml`** (deleted in this pass) does not appear in the target.
 - **`.vscode/`** stays as-is; useful for local devs and does not affect deploys.
 
-## Sibling parity
+## Sibling repos in the portfolio
 
-Once this structure lands, the repo will look like:
-- **`felonious/backend-flask/`** — the sibling Flask backend in the same org. Same factory pattern, same test layout.
-- **`ConvictCode-main/`** — the older / consolidated variant of this same product. Adopting the same shape here makes future consolidation trivial.
+Other Flask apps in the same portfolio exist at `felonious/backend-flask/` and `ConvictCode-main/`. Cross-repo parity claims about their layouts are easier to make true than to prove in this PR, so they're out of scope here — if consolidation is on the roadmap, confirm the factory/test shape of each sibling at that time rather than assuming it.
 
-Different from:
-- **`new-horizon-platform/`** — Supabase-native, no Flask. Uses `supabase/migrations/001_complete_schema.sql` as the DB source of truth. Not something to copy structurally.
-- **`ImpactConnect-main/`** — Node/Express/Drizzle. Different stack.
+Different stacks (do not copy structurally):
+- **`new-horizon-platform/`** — Supabase-native, no Flask. Uses `supabase/migrations/001_complete_schema.sql` as the DB source of truth.
+- **`ImpactConnect-main/`** — Node/Express/Drizzle.
