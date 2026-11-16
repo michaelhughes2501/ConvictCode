@@ -67,6 +67,7 @@ with app.app_context():
 - Session loading: `load_user(user_id)` in `app.py`
 - Password hashing: `werkzeug.security` (`generate_password_hash` / `check_password_hash`)
 - Unauthenticated users are redirected to `/login`
+- After login, the `?next=` target is only followed when `is_safe_redirect_url()` confirms it points at this host (prevents open redirects); otherwise the user lands on `/dashboard`. The `CSRFError` handler applies the same check to `Referer`.
 
 ---
 
@@ -97,6 +98,15 @@ csrf = CSRFProtect(app)
 This protects **every** POST route by default, including routes that read `request.form` directly (such as `add_comment`) rather than via a `FlaskForm`. The `SECRET_KEY` environment variable is used to sign tokens.
 
 The only exempted route is the JSON chatbot endpoint `/api/chat`, which is decorated with `@csrf.exempt` because it is called via `fetch()` with a JSON body and protected by `@login_required`. A `CSRFError` handler flashes a friendly message and redirects rather than returning a raw 400.
+
+---
+
+## Anthropic Connector
+
+The support chatbot (`POST /api/chat`) uses the **`anthropic`** Python SDK with `ANTHROPIC_API_KEY` from the environment.
+
+- If `ANTHROPIC_API_KEY` is unset, the route returns a canned fallback reply without calling the API.
+- `anthropic.APIError` (bad key, rate limit, network) is logged via `app.logger.exception` and the same fallback reply is returned.
 
 ---
 

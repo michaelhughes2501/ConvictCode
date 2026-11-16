@@ -1,9 +1,20 @@
-from flask_sqlalchemy import SQLAlchemy
+from datetime import UTC, datetime
+
 from flask_login import UserMixin
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
 
 db = SQLAlchemy()
+
+
+def utcnow():
+    """Current UTC time as a naive datetime.
+
+    Replacement for the deprecated ``datetime.utcnow()``. The value stays naive
+    (tzinfo stripped) so it compares cleanly with the existing naive
+    ``DateTime`` columns on SQLite and ``timestamp without time zone`` on Postgres.
+    """
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -35,7 +46,7 @@ class User(UserMixin, db.Model):
     # Account status
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     last_login = db.Column(db.DateTime)
     
     # Relationships
@@ -65,7 +76,7 @@ class Message(db.Model):
     recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     def __repr__(self):
         return f'<Message {self.sender_id} -> {self.recipient_id}>'
@@ -79,8 +90,8 @@ class ForumPost(db.Model):
     content = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), default='General')
     views = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     comments = db.relationship('ForumComment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
@@ -95,7 +106,7 @@ class ForumComment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('forum_posts.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     author = db.relationship('User', backref='forum_comments')
 
@@ -105,7 +116,7 @@ class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     liked_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     __table_args__ = (db.UniqueConstraint('user_id', 'liked_user_id', name='unique_like'),)
 
@@ -116,7 +127,7 @@ class Match(db.Model):
     user1_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     user2_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     is_mutual = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     user1 = db.relationship('User', foreign_keys=[user1_id])
     user2 = db.relationship('User', foreign_keys=[user2_id])
