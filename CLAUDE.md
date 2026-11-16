@@ -11,7 +11,7 @@ Guidance for Claude Code (and humans) when working in this repository.
 - **Language**: Python 3
 - **Framework**: Flask 2.3+
 - **ORM**: Flask-SQLAlchemy 3.1+ (SQLite for dev, PostgreSQL/MySQL ready via `DATABASE_URL`)
-- **Auth**: Flask-Login (sessions) + `werkzeug.security` password hashes (bcrypt-backed)
+- **Auth**: Flask-Login (sessions) + `werkzeug.security` password hashes (scrypt by default on modern Werkzeug; `pbkdf2` as the other supported method — `bcrypt` is listed in `requirements.txt` but is not used anywhere in the code)
 - **Forms / CSRF**: Flask-WTF + WTForms 3
 - **AI**: `anthropic` Python SDK (Claude Haiku for the support chatbot)
 - **Server**: Gunicorn (production)
@@ -114,3 +114,10 @@ All models in `database.py` (SQLAlchemy declarative). Tables are auto-created on
 
 - Replace `dev-secret-key-change-in-production` for any non-local environment.
 - Paginate `/messages`, `/matches`, and search results once the user base grows.
+- Widen `User.password_hash` from `VARCHAR(128)` to `VARCHAR(255)` / `TEXT` — werkzeug's scrypt hashes exceed 128 chars on non-SQLite backends. See `audit/02-bug-hunt.md` (B3).
+- Migrate the remaining `datetime.utcnow()` sites (`app.py`, `database.py`) to `datetime.now(timezone.utc)` — deprecated on Python 3.12+.
+- Add `Flask-Migrate` / Alembic before deploying to Postgres; `db.create_all()` cannot alter existing columns.
+
+## Audit reports
+
+See `audit/README.md` for the full engineering audit (bug hunt, security review, refactor plan, target project structure). The Phase-1 pass also deleted `.github/workflows/Bodeql.yml` (a broken/duplicate CodeQL workflow) and fixed the Windows path separator in `.gitignore`.
