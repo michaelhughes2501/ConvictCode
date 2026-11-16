@@ -42,12 +42,12 @@
             </a>
           {% endif %}
           {% if not has_liked %}
-            <button class="btn btn-outline-primary flex-fill like-btn" data-user-id="{{ user.id }}"
+            <button class="btn btn-outline-primary flex-fill like-btn" type="button" data-user-id="{{ user.id }}"
                     aria-label="Like {{ user.get_full_name() or user.username }}">
               <i class="fas fa-heart me-1" aria-hidden="true"></i> Like
             </button>
           {% else %}
-            <button class="btn btn-primary flex-fill disabled" aria-disabled="true">
+            <button class="btn btn-primary flex-fill disabled" type="button" aria-disabled="true">
               <i class="fas fa-heart me-1" aria-hidden="true"></i> Liked
             </button>
           {% endif %}

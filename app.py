@@ -15,6 +15,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///felon_dating.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Neon (and other serverless Postgres) can close idle pooled connections when
+# the compute scales to zero; pre-ping avoids a 500 on the first request after idle.
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 
 db.init_app(app)
 csrf = CSRFProtect(app)
@@ -205,7 +208,7 @@ def messages():
         user_ids.add(conv[0])
     conversations = []
     for uid in user_ids:
-        user = User.query.get(uid)
+        user = db.session.get(User, uid)
         last_message = Message.query.filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == uid)) |
             ((Message.sender_id == uid) & (Message.recipient_id == current_user.id))
