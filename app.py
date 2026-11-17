@@ -1,13 +1,36 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_wtf import FlaskForm
-from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, PasswordField, TextAreaField, IntegerField, SelectField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, NumberRange
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+from urllib.parse import urljoin, urlparse
+
 from dotenv import load_dotenv
-from database import db, User, Message, ForumPost, ForumComment, Like, Match
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import (
+    LoginManager,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFError, CSRFProtect
+from wtforms import (
+    IntegerField,
+    PasswordField,
+    SelectChoice,
+    SelectField,
+    StringField,
+    TextAreaField,
+)
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    NumberRange,
+    Optional,
+)
+
+from database import ForumComment, ForumPost, Like, Match, Message, User, db, utcnow
 
 load_dotenv()
 
@@ -26,6 +49,19 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+
+def is_safe_redirect_url(target):
+    """Return True only for redirect targets on this host (blocks open redirects)."""
+    if not target or target != target.strip() or any(ord(c) < 32 for c in target):
+        # Browsers drop leading whitespace/control chars, which could turn a
+        # harmless-looking relative path into a protocol-relative URL.
+        return False
+    # Browsers treat backslashes like forward slashes, so '/\\evil.com' would
+    # otherwise be resolved as a protocol-relative URL to another host.
+    target = target.replace('\\', '/')
+    host_url = urlparse(request.host_url)
+    redirect_url = urlparse(urljoin(request.host_url, target))
+    return redirect_url.scheme in ('http', 'https') and redirect_url.netloc == host_url.netloc
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -48,17 +84,17 @@ class LoginForm(FlaskForm):
 class ProfileForm(FlaskForm):
     first_name = StringField('First Name', validators=[Length(max=50)])
     last_name = StringField('Last Name', validators=[Length(max=50)])
-    age = IntegerField('Age', validators=[NumberRange(min=18, max=120)], render_kw={'placeholder': 'Your age'})
-    gender = SelectField('Gender', choices=[('', 'Select'), ('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    age = IntegerField('Age', validators=[Optional(), NumberRange(min=18, max=120)], render_kw={'placeholder': 'Your age'})
+    gender = SelectField('Gender', choices=[SelectChoice('', 'Select'), SelectChoice('Male', 'Male'), SelectChoice('Female', 'Female'), SelectChoice('Other', 'Other')])
     location = StringField('Location', validators=[Length(max=100)])
     bio = TextAreaField('Bio', validators=[Length(max=500)])
     crime_type = StringField('Offense Type', validators=[Length(max=100)])
     release_date = StringField('Release Date', validators=[Length(max=50)])
     rehabilitation_status = SelectField('Rehabilitation Status', choices=[
-        ('', 'Select'),
-        ('Completed Program', 'Completed Program'),
-        ('In Progress', 'In Progress'),
-        ('Seeking Support', 'Seeking Support')
+        SelectChoice('', 'Select'),
+        SelectChoice('Completed Program', 'Completed Program'),
+        SelectChoice('In Progress', 'In Progress'),
+        SelectChoice('Seeking Support', 'Seeking Support')
     ])
     looking_for = StringField('Looking For', validators=[Length(max=100)])
 
@@ -66,10 +102,10 @@ class ForumPostForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(max=200)])
     content = TextAreaField('Content', validators=[DataRequired()])
     category = SelectField('Category', choices=[
-        ('General', 'General Discussion'),
-        ('Support', 'Support & Advice'),
-        ('Success Stories', 'Success Stories'),
-        ('Resources', 'Resources & Information')
+        SelectChoice('General', 'General Discussion'),
+        SelectChoice('Support', 'Support & Advice'),
+        SelectChoice('Success Stories', 'Success Stories'),
+        SelectChoice('Resources', 'Resources & Information')
     ])
 
 class MessageForm(FlaskForm):
@@ -130,12 +166,14 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
-            login_user(user)
-            user.last_login = datetime.utcnow()
+            user.last_login = utcnow()
             db.session.commit()
+            login_user(user)
             flash('Logged in successfully!', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            if is_safe_redirect_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
         flash('Invalid username or password.', 'danger')
     return render_template('login.html', form=form)
 
@@ -144,7 +182,7 @@ def login():
 def dashboard():
     matches = Match.query.filter(
         ((Match.user1_id == current_user.id) | (Match.user2_id == current_user.id)) &
-        (Match.is_mutual == True)
+        Match.is_mutual.is_(True)
     ).limit(5).all()
     unread_messages = Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
     recent_posts = ForumPost.query.order_by(ForumPost.created_at.desc()).limit(5).all()
@@ -169,7 +207,7 @@ def profile():
 @app.route('/profile/<int:user_id>')
 @login_required
 def view_profile(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     is_match = Match.query.filter(
         ((Match.user1_id == current_user.id) & (Match.user2_id == user_id)) |
         ((Match.user1_id == user_id) & (Match.user2_id == current_user.id))
@@ -182,6 +220,7 @@ def view_profile(user_id):
 def like_user(user_id):
     if user_id == current_user.id:
         return jsonify({'error': 'Cannot like yourself'}), 400
+    db.get_or_404(User, user_id)
     existing_like = Like.query.filter_by(user_id=current_user.id, liked_user_id=user_id).first()
     if existing_like:
         return jsonify({'error': 'Already liked this user'}), 400
@@ -221,7 +260,7 @@ def messages():
 @app.route('/messages/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def conversation(user_id):
-    other_user = User.query.get_or_404(user_id)
+    other_user = db.get_or_404(User, user_id)
     form = MessageForm()
     Message.query.filter_by(sender_id=user_id, recipient_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
@@ -262,7 +301,7 @@ def new_post():
 
 @app.route('/forum/post/<int:post_id>')
 def view_post(post_id):
-    post = ForumPost.query.get_or_404(post_id)
+    post = db.get_or_404(ForumPost, post_id)
     post.views += 1
     db.session.commit()
     comments = ForumComment.query.filter_by(post_id=post_id).order_by(ForumComment.created_at).all()
@@ -271,6 +310,7 @@ def view_post(post_id):
 @app.route('/forum/post/<int:post_id>/comment', methods=['POST'])
 @login_required
 def add_comment(post_id):
+    db.get_or_404(ForumPost, post_id)
     content = request.form.get('content')
     if content:
         comment = ForumComment(post_id=post_id, user_id=current_user.id, content=content)
@@ -284,7 +324,7 @@ def add_comment(post_id):
 def matches():
     user_matches = Match.query.filter(
         ((Match.user1_id == current_user.id) | (Match.user2_id == current_user.id)) &
-        (Match.is_mutual == True)
+        Match.is_mutual.is_(True)
     ).all()
     match_users = []
     for match in user_matches:
@@ -337,9 +377,17 @@ def chat():
     user_message = data.get('message', '').strip()
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
+    fallback_reply = (
+        "I'm here to help! I can point you toward housing resources, employment programs, "
+        "legal aid, mental health support, and help you navigate this platform. "
+        "Check the Resources page for a full directory, or ask me a specific question."
+    )
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if not api_key:
+        return jsonify({'reply': fallback_reply})
+    import anthropic
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+        client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=400,
@@ -354,19 +402,16 @@ def chat():
             ),
             messages=[{'role': 'user', 'content': user_message}]
         )
-        reply = response.content[0].text
-    except Exception:
-        reply = (
-            "I'm here to help! I can point you toward housing resources, employment programs, "
-            "legal aid, mental health support, and help you navigate this platform. "
-            "Check the Resources page for a full directory, or ask me a specific question."
-        )
+        reply = next((block.text for block in response.content if block.type == 'text'), fallback_reply)
+    except anthropic.APIError:
+        app.logger.exception('anthropic chat failure')
+        reply = fallback_reply
     return jsonify({'reply': reply})
 
 @app.route('/api/analytics')
 @login_required
 def analytics():
-    now = datetime.utcnow()
+    now = utcnow()
     week_ago = now - timedelta(days=7)
     return jsonify({
         'total_users': User.query.count(),
@@ -395,7 +440,8 @@ def resources_api():
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
     flash('Security token expired. Please try again.', 'danger')
-    return redirect(request.referrer or url_for('index'))
+    referrer = request.referrer
+    return redirect(referrer if is_safe_redirect_url(referrer) else url_for('index'))
 
 @app.context_processor
 def inject_current_year():

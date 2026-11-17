@@ -9,6 +9,7 @@ import ast
 import os
 import re
 import unittest
+from typing import ClassVar
 
 # Paths relative to this file's location (tests/)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -529,7 +530,7 @@ class TestAddingConnectorDocumentation(unittest.TestCase):
 class TestEnvironmentVariableTable(unittest.TestCase):
     """The env-var table in connectors.md must document all five variables."""
 
-    EXPECTED_VARS = ["SECRET_KEY", "DATABASE_URL", "HOST", "PORT", "FLASK_DEBUG"]
+    EXPECTED_VARS: ClassVar[list[str]] = ["SECRET_KEY", "DATABASE_URL", "HOST", "PORT", "FLASK_DEBUG"]
 
     @classmethod
     def setUpClass(cls):
